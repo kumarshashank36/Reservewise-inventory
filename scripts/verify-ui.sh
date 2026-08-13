@@ -142,6 +142,8 @@ Admin sign-in: admin@example.com (select the Admin sign-in type) / password from
                  no Deactivate button. Reactivate restores sign-in and the badge flips back.
 20. WISHLIST     Heart a product in the catalog (never affects stock), open Wishlist, reserve from there
                  through the normal flow, watch a sold-out item stay saved but fail to reserve, then remove it.
+21. PAGINATION   Lists show a pager with numbered pages, Previous/Next, and a Per-page dropdown (5/10/20/50)
+                 that resets to page 1; empty last pages snap back.
 
 Fast path for the 10-minute expiry (scenario 9):
   Stop this script (Ctrl+C), then run:  HOLD_MINUTES=1 npm run verify:ui

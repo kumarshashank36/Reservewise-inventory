@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { createProduct, listAdminProducts, listCatalogProducts, updateProduct } from '../services/productService.js';
+import { paginationMeta, parsePagination } from '../services/pagination.js';
 
 const sku = z.string().trim().min(2).max(64).regex(/^[A-Za-z0-9][A-Za-z0-9_-]*$/, 'SKU may contain letters, numbers, hyphens, and underscores');
 const inventory = z.number().int().nonnegative().max(10_000_000);
@@ -19,11 +20,15 @@ const updateSchema = z.object({
 }).strict().refine((input) => Object.keys(input).length > 0, 'Provide at least one field to update');
 
 export async function listCatalog(req, res) {
-  res.json({ products: await listCatalogProducts() });
+  const { page, limit } = parsePagination(req.query);
+  const { products, total } = await listCatalogProducts({ page, limit });
+  res.json({ products, pagination: paginationMeta(page, limit, total) });
 }
 
 export async function listAdmin(req, res) {
-  res.json({ products: await listAdminProducts() });
+  const { page, limit } = parsePagination(req.query);
+  const { products, total } = await listAdminProducts({ page, limit });
+  res.json({ products, pagination: paginationMeta(page, limit, total) });
 }
 
 export async function create(req, res) {

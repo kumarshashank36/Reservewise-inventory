@@ -3,8 +3,10 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useWishlist } from '../context/WishlistContext.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/AsyncState.jsx';
 import { PageHeader } from '../components/AppShell.jsx';
+import { Pagination } from '../components/Pagination.jsx';
 import { api } from '../services/api.js';
 
+const PAGE_SIZE = 10;
 const money = (cents) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 const heldMinutes = (reservation) => Math.max(1, Math.round((new Date(reservation.expiresAt).getTime() - new Date(reservation.createdAt).getTime()) / 60000));
 
@@ -12,6 +14,7 @@ export function CustomerWishlist() {
   const { session } = useAuth();
   const { ids, toggle } = useWishlist();
   const [data, setData] = useState({ loading: true, error: null, items: [] });
+  const [pagination, setPagination] = useState(null); const [page, setPage] = useState(1); const [limit, setLimit] = useState(PAGE_SIZE);
   const [quantities, setQuantities] = useState({});
   const [actionId, setActionId] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -20,23 +23,24 @@ export function CustomerWishlist() {
   const refresh = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setData((current) => ({ ...current, loading: true, error: null }));
     try {
-      const { payload } = await api.wishlist(session.token);
+      const { payload } = await api.wishlist(session.token, { page, limit });
       setData({ loading: false, error: null, items: payload.items });
+      setPagination(payload.pagination ?? null);
+      if (payload.pagination && payload.pagination.totalPages < page) setPage(payload.pagination.totalPages);
     } catch (error) {
       setData((current) => ({ ...current, loading: false, error }));
     }
-  }, [session.token]);
+  }, [session.token, page, limit]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
   // Keep availability current while the page is open.
   useEffect(() => { const timer = setInterval(() => refresh({ silent: true }), 15000); return () => clearInterval(timer); }, [refresh]);
 
-  // Re-sync when the shared wishlist membership changes (e.g. a product hearted in the
-  // catalog), and recover if a fetch raced an in-flight add and missed it.
-  const fetchedIds = data.items.map((entry) => entry.product._id);
-  const synced = fetchedIds.length === ids.size && fetchedIds.every((id) => ids.has(id));
-  useEffect(() => { if (!synced) refresh({ silent: true }); }, [synced, refresh]);
+  // Recover when a fetch raced an in-flight add: page 1 showing nothing while the shared
+  // membership set has entries means the just-hearted item was missed.
+  const membershipMismatch = page === 1 && data.items.length === 0 && ids.size > 0;
+  useEffect(() => { if (membershipMismatch) refresh({ silent: true }); }, [membershipMismatch, refresh]);
 
   // Refetch when the tab regains focus so changes from other tabs appear immediately.
   useEffect(() => {
@@ -99,5 +103,5 @@ export function CustomerWishlist() {
         </div>
       </article>;
     })}</div> : <EmptyState title="Nothing saved yet" detail="Add products from the catalog and reserve them here when you are ready." />}
-  </>;
+    <Pagination pagination={pagination} onChange={setPage} onLimitChange={(next) => { setPage(1); setLimit(next); }} label="products" /></>;
 }

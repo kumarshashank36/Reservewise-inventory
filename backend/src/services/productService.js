@@ -1,12 +1,21 @@
 import { AppError } from '../errors/AppError.js';
 import { Product } from '../models/Product.js';
 
-export async function listCatalogProducts() {
-  return Product.find({ isActive: true }).sort({ name: 1 });
+export async function listCatalogProducts({ page, limit }) {
+  const filter = { isActive: true };
+  const [products, total] = await Promise.all([
+    Product.find(filter).sort({ name: 1 }).skip((page - 1) * limit).limit(limit),
+    Product.countDocuments(filter)
+  ]);
+  return { products, total };
 }
 
-export async function listAdminProducts() {
-  return Product.find().sort({ updatedAt: -1 });
+export async function listAdminProducts({ page, limit }) {
+  const [products, total] = await Promise.all([
+    Product.find().sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit),
+    Product.countDocuments()
+  ]);
+  return { products, total };
 }
 
 export async function createProduct(input) {

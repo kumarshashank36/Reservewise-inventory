@@ -162,6 +162,56 @@ describe('CustomerCatalog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reserve inventory' }));
     await waitFor(() => expect(api.createReservation.mock.calls[1][2]).toBe(failedKey));
   });
+
+  it('paginates the catalog and navigates between pages', async () => {
+    api.products
+      .mockResolvedValueOnce({ payload: { products: [product()], pagination: { page: 1, limit: 10, total: 12, totalPages: 2 } } })
+      .mockResolvedValueOnce({ payload: { products: [product({ _id: 'p2', sku: 'LAMP-02', name: 'Second Lamp', available: 2, onHand: 2 })], pagination: { page: 2, limit: 10, total: 12, totalPages: 2 } } });
+    renderWithAuth(<CustomerCatalog />);
+
+    await screen.findByText('Desk Lamp');
+    expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    await screen.findByText('Second Lamp');
+    expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 2, limit: 10 });
+    expect(screen.getByText(/Page 2 of 2/)).toBeInTheDocument();
+  });
+
+  it('shows the pager even on a single page so pagination stays discoverable', async () => {
+    api.products.mockResolvedValue({ payload: { products: [product()], pagination: { page: 1, limit: 10, total: 3, totalPages: 1 } } });
+    renderWithAuth(<CustomerCatalog />);
+
+    await screen.findByText('Desk Lamp');
+    expect(screen.getByText(/3 products · Page 1 of 1/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Previous page' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('button', { name: 'Next page' })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('changes the page size and resets to the first page', async () => {
+    api.products.mockResolvedValue({ payload: { products: [product()], pagination: { page: 2, limit: 10, total: 12, totalPages: 2 } } });
+    renderWithAuth(<CustomerCatalog />);
+
+    await screen.findByText('Desk Lamp');
+    const size = screen.getByRole('combobox', { name: 'Items per page' });
+    expect(size).toHaveValue('10');
+
+    fireEvent.change(size, { target: { value: '20' } });
+    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 20 }));
+  });
+});
+
+describe('CustomerReservations pagination', () => {
+  it('navigates reservation pages', async () => {
+    api.reservations.mockResolvedValueOnce({ payload: { reservations: [reservation()], pagination: { page: 1, limit: 10, total: 11, totalPages: 2 } } });
+    renderWithAuth(<CustomerReservations />);
+
+    await screen.findByText(/Reservation #/);
+    expect(screen.getByRole('button', { name: 'Next page' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    await waitFor(() => expect(api.reservations).toHaveBeenLastCalledWith('customer-token', { page: 2, limit: 10 }));
+  });
 });
 
 describe('CustomerReservations', () => {

@@ -36,9 +36,12 @@ export async function provisionUser({ name, email, password, role }) {
   return publicUser(user);
 }
 
-export async function listUsers() {
-  const users = await User.find().sort({ createdAt: -1 }).lean();
-  return users.map(publicUser);
+export async function listUsers({ page, limit }) {
+  const [users, total] = await Promise.all([
+    User.find().sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    User.countDocuments()
+  ]);
+  return { users: users.map(publicUser), total };
 }
 
 export async function loginUser({ email, password, role }) {

@@ -1,12 +1,15 @@
 import mongoose from 'mongoose';
 import { z } from 'zod';
 import { addWishlistItem, listWishlistItems, removeWishlistItem } from '../services/wishlistService.js';
+import { paginationMeta, parsePagination } from '../services/pagination.js';
 
 const productId = z.string().refine((value) => mongoose.Types.ObjectId.isValid(value), 'Invalid product identifier');
 const addSchema = z.object({ productId }).strict();
 
 export async function list(req, res) {
-  res.json({ items: await listWishlistItems(req.user.id) });
+  const { page, limit } = parsePagination(req.query);
+  const { items, total } = await listWishlistItems(req.user.id, { page, limit });
+  res.json({ items, pagination: paginationMeta(page, limit, total) });
 }
 
 export async function add(req, res) {

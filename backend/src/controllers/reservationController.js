@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { z } from 'zod';
 import { cancelReservation, completeReservation, createReservation, getCustomerReservation, listAdminReservations, listCustomerReservations } from '../services/reservationService.js';
+import { paginationMeta, parsePagination } from '../services/pagination.js';
 
 const productId = z.string().refine((value) => mongoose.Types.ObjectId.isValid(value), 'Invalid product identifier');
 const createSchema = z.object({
@@ -22,7 +23,9 @@ export async function create(req, res) {
 }
 
 export async function listMine(req, res) {
-  res.json({ reservations: await listCustomerReservations(req.user.id) });
+  const { page, limit } = parsePagination(req.query);
+  const { reservations, total } = await listCustomerReservations(req.user.id, { page, limit });
+  res.json({ reservations, pagination: paginationMeta(page, limit, total) });
 }
 
 export async function getMine(req, res) {
@@ -38,5 +41,7 @@ export async function complete(req, res) {
 }
 
 export async function listAdmin(req, res) {
-  res.json({ reservations: await listAdminReservations() });
+  const { page, limit } = parsePagination(req.query);
+  const { reservations, total } = await listAdminReservations({ page, limit });
+  res.json({ reservations, pagination: paginationMeta(page, limit, total) });
 }

@@ -109,4 +109,17 @@ describe('CustomerWishlist', () => {
     await screen.findByText('Desk Lamp');
     expect(screen.getByText('3 available')).toBeInTheDocument();
   });
+
+  it('paginates the wishlist', async () => {
+    api.wishlist
+      .mockResolvedValueOnce({ payload: { items: [item()], pagination: { page: 1, limit: 10, total: 12, totalPages: 2 } } })
+      .mockResolvedValue({ payload: { items: [item()], pagination: { page: 1, limit: 10, total: 12, totalPages: 2 } } });
+    renderWishlist();
+
+    await screen.findByText('Desk Lamp');
+    expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    await waitFor(() => expect(api.wishlist).toHaveBeenLastCalledWith('customer-token', { page: 2, limit: 10 }));
+  });
 });

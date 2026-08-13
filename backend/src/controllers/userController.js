@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { listUsers, provisionUser, reactivateUserByAdmin, softDeleteUserByAdmin } from '../services/authService.js';
+import { paginationMeta, parsePagination } from '../services/pagination.js';
 
 const email = z.string().trim().toLowerCase().email();
 const createUserSchema = z.object({
@@ -10,7 +11,9 @@ const createUserSchema = z.object({
 }).strict();
 
 export async function list(req, res) {
-  res.json({ users: await listUsers() });
+  const { page, limit } = parsePagination(req.query);
+  const { users, total } = await listUsers({ page, limit });
+  res.json({ users, pagination: paginationMeta(page, limit, total) });
 }
 
 export async function create(req, res) {

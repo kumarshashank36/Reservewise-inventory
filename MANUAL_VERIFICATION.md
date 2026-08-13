@@ -170,6 +170,14 @@ HOLD_MINUTES=1 npm run verify:ui
 9. **Expected:** the item disappears and inventory is untouched.
    *Rule: wishlists are per-customer bookmarks; only a successful reservation changes inventory.*
 
+### 21. Pagination
+
+1. Open the customer **Catalog** — the seed ships 12 products, so a pager appears below the grid.
+2. **Expected:** a "12 products · Page 1 of 2" bar with numbered page buttons (**1 2**), an active-state highlight on the current page, a **Per page** dropdown (5 / 10 / 20 / 50), and **Previous / Next** controls; Next loads page 2 and Previous becomes enabled. Choosing a new page size resets to page 1 and refetches (e.g. 20 → one page, 5 → three pages).
+3. The same pager appears on admin **Inventory** (12 products), and on **My reservations**, **Wishlist**, admin **Reservations**, and **Team** once those lists exceed 10 items.
+4. **Expected:** even with a single page of data the bar stays visible ("Page 1 of 1" with disabled controls), and visiting a page beyond the last (e.g. after removing the last item on page 2) snaps back to the last valid page.
+   *Rule: every list endpoint is server-paginated (page/limit with totals); the draft cart still counts selections across all pages.*
+
 ## What is NOT manually verifiable via the UI (by design)
 
 These are the properties the UI cannot easily demonstrate, so they are enforced by automated tests instead (`npm test` — 26 backend, 19 frontend):

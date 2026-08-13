@@ -1,5 +1,11 @@
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:4000/api/v1';
 
+function query(params) {
+  const search = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== null).map(([key, value]) => [key, String(value)]));
+  const string = search.toString();
+  return string ? `?${string}` : '';
+}
+
 export class ApiError extends Error {
   constructor(message, { status, code, details } = {}) {
     super(message);
@@ -23,20 +29,20 @@ export const api = {
   register: (body) => request('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
   login: (body) => request('/auth/login', { method: 'POST', body: JSON.stringify(body) }),
   me: (token) => request('/auth/me', { token }),
-  products: (token) => request('/products', { token }),
-  reservations: (token) => request('/reservations', { token }),
+  products: (token, params = {}) => request(`/products${query(params)}`, { token }),
+  reservations: (token, params = {}) => request(`/reservations${query(params)}`, { token }),
   createReservation: (token, items, idempotencyKey) => request('/reservations', { token, method: 'POST', headers: { 'Idempotency-Key': idempotencyKey }, body: JSON.stringify({ items }) }),
   cancelReservation: (token, id) => request(`/reservations/${id}/cancel`, { token, method: 'POST' }),
   completeReservation: (token, id) => request(`/reservations/${id}/complete`, { token, method: 'POST' }),
-  adminProducts: (token) => request('/admin/products', { token }),
+  adminProducts: (token, params = {}) => request(`/admin/products${query(params)}`, { token }),
   createProduct: (token, body) => request('/admin/products', { token, method: 'POST', body: JSON.stringify(body) }),
   updateProduct: (token, id, body) => request(`/admin/products/${id}`, { token, method: 'PATCH', body: JSON.stringify(body) }),
-  adminReservations: (token) => request('/admin/reservations', { token }),
-  adminUsers: (token) => request('/admin/users', { token }),
+  adminReservations: (token, params = {}) => request(`/admin/reservations${query(params)}`, { token }),
+  adminUsers: (token, params = {}) => request(`/admin/users${query(params)}`, { token }),
   createUser: (token, body) => request('/admin/users', { token, method: 'POST', body: JSON.stringify(body) }),
   deactivateUser: (token, id) => request(`/admin/users/${id}`, { token, method: 'DELETE' }),
   reactivateUser: (token, id) => request(`/admin/users/${id}/activate`, { token, method: 'POST' }),
-  wishlist: (token) => request('/wishlist', { token }),
+  wishlist: (token, params = {}) => request(`/wishlist${query(params)}`, { token }),
   addWishlistItem: (token, productId) => request('/wishlist', { token, method: 'POST', body: JSON.stringify({ productId }) }),
   removeWishlistItem: (token, productId) => request(`/wishlist/${productId}`, { token, method: 'DELETE' })
 };

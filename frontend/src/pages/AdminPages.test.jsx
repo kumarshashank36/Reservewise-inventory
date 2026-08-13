@@ -172,4 +172,42 @@ describe('AdminUsers', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reactivate' }));
     await waitFor(() => expect(api.reactivateUser).toHaveBeenCalledWith('admin-token', 'u2'));
   });
+
+  it('paginates the inventory list', async () => {
+    api.adminProducts.mockResolvedValueOnce({ payload: { products: [product()], pagination: { page: 1, limit: 10, total: 12, totalPages: 2 } } });
+    renderWithAuth(<AdminInventory />);
+
+    await screen.findByText('Desk Lamp');
+    expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', { page: 2, limit: 10 }));
+  });
+
+  it('changes the inventory page size and resets to the first page', async () => {
+    api.adminProducts.mockResolvedValue({ payload: { products: [product()], pagination: { page: 2, limit: 10, total: 12, totalPages: 2 } } });
+    renderWithAuth(<AdminInventory />);
+
+    await screen.findByText('Desk Lamp');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Items per page' }), { target: { value: '5' } });
+    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', { page: 1, limit: 5 }));
+  });
+
+  it('paginates the reservation audit', async () => {
+    api.adminReservations.mockResolvedValueOnce({ payload: { reservations: [{ _id: 'abcdef123456', status: 'pending', customerId: { name: 'Jamie', email: 'jamie@example.com' }, items: [{ sku: 'LAMP-01', quantity: 2, name: 'Desk Lamp' }], createdAt: new Date().toISOString() }], pagination: { page: 1, limit: 10, total: 11, totalPages: 2 } } });
+    renderWithAuth(<AdminReservations />);
+
+    await screen.findByText(/Jamie/);
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    await waitFor(() => expect(api.adminReservations).toHaveBeenLastCalledWith('admin-token', { page: 2, limit: 10 }));
+  });
+
+  it('paginates the team list', async () => {
+    api.adminUsers.mockResolvedValueOnce({ payload: { users: [{ id: 'a1', name: 'Inventory Admin', email: 'admin@example.com', role: 'admin', createdAt: new Date().toISOString(), deletedAt: null }], pagination: { page: 1, limit: 10, total: 12, totalPages: 2 } } });
+    renderWithAuth(<AdminUsers />);
+
+    await screen.findByText('Inventory Admin');
+    fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+    await waitFor(() => expect(api.adminUsers).toHaveBeenLastCalledWith('admin-token', { page: 2, limit: 10 }));
+  });
 });

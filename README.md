@@ -34,7 +34,7 @@ Prerequisites: Node.js 20+, npm, and Docker Desktop.
    docker compose ps
    ```
 
-4. Install dependencies and optionally seed an admin plus three products. Choose a real local-only seed password; it is not stored in source control.
+4. Install dependencies and optionally seed an admin plus twelve products. Choose a real local-only seed password; it is not stored in source control.
 
    ```sh
    npm install
@@ -110,7 +110,7 @@ High-contention product documents—especially a popular low-stock SKU—would b
 
 ### 7. What remains before production readiness?
 
-Add refresh-token rotation/secure cookies, email verification/password recovery, rate limiting, audit logs for inventory changes, CSRF strategy where cookies are used, structured metrics/tracing/alerts, migration tooling, backups and restore drills, paginated/filterable admin APIs, broader end-to-end/accessibility tests, CI/CD, secrets management, and a multi-node MongoDB deployment.
+Add refresh-token rotation/secure cookies, email verification/password recovery, rate limiting, audit logs for inventory changes, CSRF strategy where cookies are used, structured metrics/tracing/alerts, migration tooling, backups and restore drills, filterable/sortable list APIs (all lists are already paginated), broader end-to-end/accessibility tests, CI/CD, secrets management, and a multi-node MongoDB deployment.
 
 ### 8. How AI was used
 

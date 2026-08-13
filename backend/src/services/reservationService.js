@@ -112,8 +112,13 @@ export async function createReservation({ customerId, items, idempotencyKey }) {
   }
 }
 
-export async function listCustomerReservations(customerId) {
-  return Reservation.find({ customerId }).sort({ createdAt: -1 });
+export async function listCustomerReservations(customerId, { page, limit }) {
+  const filter = { customerId };
+  const [reservations, total] = await Promise.all([
+    Reservation.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+    Reservation.countDocuments(filter)
+  ]);
+  return { reservations, total };
 }
 
 export async function getCustomerReservation(customerId, reservationId) {
@@ -122,8 +127,12 @@ export async function getCustomerReservation(customerId, reservationId) {
   return reservation;
 }
 
-export async function listAdminReservations() {
-  return Reservation.find().populate('customerId', 'name email').sort({ createdAt: -1 });
+export async function listAdminReservations({ page, limit }) {
+  const [reservations, total] = await Promise.all([
+    Reservation.find().populate('customerId', 'name email').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
+    Reservation.countDocuments()
+  ]);
+  return { reservations, total };
 }
 
 async function releaseExpiredReservation(reservationId, now = new Date()) {

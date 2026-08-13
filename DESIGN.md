@@ -126,6 +126,8 @@ Indexes: `{ customerId: 1, productId: 1 }` unique — one entry per product per 
 
 All endpoints are prefixed with `/api/v1`. Errors use `{ error: { code, message, details? } }`.
 
+List endpoints accept `?page=1&limit=20` (page ≥ 1, limit 1–100) and return `pagination: { page, limit, total, totalPages }` alongside their data array: catalog, wishlist, customer reservations, admin products, admin reservations, and admin users.
+
 | Area | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
 | Health | `GET /health` | public | liveness/readiness check |

@@ -18,13 +18,18 @@ function publicProduct(product) {
   };
 }
 
-export async function listWishlistItems(customerId) {
-  const items = await WishlistItem.find({ customerId }).sort({ createdAt: -1 }).lean();
+export async function listWishlistItems(customerId, { page, limit }) {
+  const filter = { customerId };
+  const [items, total] = await Promise.all([
+    WishlistItem.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    WishlistItem.countDocuments(filter)
+  ]);
   const products = await Product.find({ _id: { $in: items.map((item) => item.productId) } }).lean();
   const productsById = new Map(products.map((product) => [product._id.toString(), product]));
-  return items
+  const mapped = items
     .filter((item) => productsById.has(item.productId.toString()))
     .map((item) => ({ product: publicProduct(productsById.get(item.productId.toString())), addedAt: item.createdAt }));
+  return { items: mapped, total };
 }
 
 export async function addWishlistItem(customerId, productId) {
