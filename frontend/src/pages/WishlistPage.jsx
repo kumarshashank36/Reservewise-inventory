@@ -4,6 +4,7 @@ import { useWishlist } from '../context/WishlistContext.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/AsyncState.jsx';
 import { PageHeader } from '../components/AppShell.jsx';
 import { Pagination } from '../components/Pagination.jsx';
+import { categoryLabel } from '../categories.js';
 import { api } from '../services/api.js';
 
 const PAGE_SIZE = 10;
@@ -93,7 +94,7 @@ export function CustomerWishlist() {
       return <article className="reservation-row" key={product._id}>
         <div className="reservation-primary">
           <div className="reservation-title"><strong>{product.name}</strong><span className={available ? 'stock-live' : 'stock-empty'}>{available ? `${available} available` : 'Unavailable'}</span></div>
-          <span>{product.sku} · {money(product.priceCents)}</span>
+          <span>{product.sku}{categoryLabel(product.category) ? ` · ${categoryLabel(product.category)}` : ''} · {money(product.priceCents)}</span>
           <small>Saved {new Date(addedAt).toLocaleString()}</small>
         </div>
         <div className="row-actions">

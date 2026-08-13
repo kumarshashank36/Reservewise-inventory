@@ -117,7 +117,8 @@ Admin sign-in: admin@example.com (select the Admin sign-in type) / password from
  3. LOGIN        Pick Customer or Admin on the sign-in toggle. A wrong password shows a generic error;
                  a correct password with the wrong toggle shows a role-mismatch error; the matching
                  toggle lands in the right workspace.
- 4. CATALOG      Three seeded products appear with availability; steppers stop at 0 and at available.
+ 4. CATALOG      Thirty seeded products appear across pages with category chips (Electronics, Furniture,
+                 Clothing, Home & Living, Stationery); chips filter server-side; steppers stop at 0 and at available.
  5. RESERVE      Pick quantities → Reserve inventory → success notice with the hold length; availability drops.
                  The draft survives navigation and refreshes; a failed reserve keeps the same hold key for
                  a safe retry.
@@ -144,6 +145,8 @@ Admin sign-in: admin@example.com (select the Admin sign-in type) / password from
                  through the normal flow, watch a sold-out item stay saved but fail to reserve, then remove it.
 21. PAGINATION   Lists show a pager with numbered pages, Previous/Next, and a Per-page dropdown (5/10/20/50)
                  that resets to page 1; empty last pages snap back.
+22. CATEGORIES   Catalog chips filter by category server-side; admin Add product form assigns a category,
+                 and category labels show on cards, wishlist rows, and the admin inventory table.
 
 Fast path for the 10-minute expiry (scenario 9):
   Stop this script (Ctrl+C), then run:  HOLD_MINUTES=1 npm run verify:ui

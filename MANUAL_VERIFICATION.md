@@ -48,7 +48,7 @@ HOLD_MINUTES=1 npm run verify:ui
 ### 4. Catalog
 
 1. Open **Catalog**.
-2. **Expected:** three seeded products (Lumen Desk Lamp, Form Task Chair, Grid Storage Shelf), each showing price and units available. The stepper `+` is disabled when quantity reaches `available`, and `−` is disabled at 0.
+2. **Expected:** seeded products with a category chip row (**All / Electronics / Furniture / Clothing / Home & Living / Stationery**), each card showing its category label, price, and units available. The stepper `+` is disabled when quantity reaches `available`, and `−` is disabled at 0.
 
 ### 5. Reserve inventory
 
@@ -177,6 +177,15 @@ HOLD_MINUTES=1 npm run verify:ui
 3. The same pager appears on admin **Inventory** (12 products), and on **My reservations**, **Wishlist**, admin **Reservations**, and **Team** once those lists exceed 10 items.
 4. **Expected:** even with a single page of data the bar stays visible ("Page 1 of 1" with disabled controls), and visiting a page beyond the last (e.g. after removing the last item on page 2) snaps back to the last valid page.
    *Rule: every list endpoint is server-paginated (page/limit with totals); the draft cart still counts selections across all pages.*
+
+### 22. Category browsing
+
+1. On the Catalog, click **Electronics** in the chip row.
+2. **Expected:** only electronics products show (6 seeded), the chip highlights, the pager reflects the filtered total, and the wishlist/admin views show the category label on each item.
+3. Click **All** → the full 30-product catalog returns across pages.
+4. As admin, add a product with a chosen **Category** from the form.
+5. **Expected:** it appears under that category chip for customers; a filtered category with no products shows "No products in <category>".
+   *Rule: category filtering is server-side (`?category=`), combined with pagination and the active-only catalog.*
 
 ## What is NOT manually verifiable via the UI (by design)
 

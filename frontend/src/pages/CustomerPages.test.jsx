@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext } from '../context/AuthContext.jsx';
 import { WishlistProvider } from '../context/WishlistContext.jsx';
@@ -174,7 +174,7 @@ describe('CustomerCatalog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
     await screen.findByText('Second Lamp');
-    expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 2, limit: 10 });
+    expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 2, limit: 10, category: null });
     expect(screen.getByText(/Page 2 of 2/)).toBeInTheDocument();
   });
 
@@ -197,7 +197,21 @@ describe('CustomerCatalog', () => {
     expect(size).toHaveValue('10');
 
     fireEvent.change(size, { target: { value: '20' } });
-    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 20 }));
+    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 20, category: null }));
+  });
+
+  it('filters the catalog by category with chips and shows the category on cards', async () => {
+    api.products.mockResolvedValue({ payload: { products: [product({ category: 'electronics' })], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    renderWithAuth(<CustomerCatalog />);
+
+    await screen.findByText('Desk Lamp');
+    // The chip row offers all categories plus "All", and the card shows its category label.
+    expect(screen.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
+    expect(within(screen.getByRole('article')).getByText('Electronics')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Furniture' }));
+    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 10, category: 'furniture' }));
+    expect(screen.getByRole('tab', { name: 'Furniture' })).toHaveAttribute('aria-selected', 'true');
   });
 });
 

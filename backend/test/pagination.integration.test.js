@@ -128,4 +128,27 @@ describe('list endpoint pagination', () => {
     expect(garbage.status).toBe(400);
     expect(garbage.body.error.code).toBe('VALIDATION_ERROR');
   });
+
+  it('filters the customer catalog by category and rejects unknown categories', async () => {
+    await Product.insertMany([
+      { sku: 'CAT-E1', name: 'Category E1', priceCents: 100, onHand: 1, reserved: 0, isActive: true, category: 'electronics' },
+      { sku: 'CAT-E2', name: 'Category E2', priceCents: 100, onHand: 1, reserved: 0, isActive: true, category: 'electronics' },
+      { sku: 'CAT-F1', name: 'Category F1', priceCents: 100, onHand: 1, reserved: 0, isActive: true, category: 'furniture' },
+      { sku: 'CAT-F2', name: 'Category F2', priceCents: 100, onHand: 1, reserved: 0, isActive: false, category: 'furniture' }
+    ]);
+
+    const electronics = await request(app).get('/api/v1/products?category=electronics').set('Authorization', `Bearer ${customerToken}`);
+    expect(electronics.status).toBe(200);
+    expect(electronics.body.products.map((product) => product.sku)).toEqual(['CAT-E1', 'CAT-E2']);
+    expect(electronics.body.pagination.total).toBe(2);
+
+    // Inactive products stay hidden inside a filtered category.
+    const furniture = await request(app).get('/api/v1/products?category=furniture').set('Authorization', `Bearer ${customerToken}`);
+    expect(furniture.body.products.map((product) => product.sku)).toEqual(['CAT-F1']);
+    expect(furniture.body.pagination.total).toBe(1);
+
+    const unknown = await request(app).get('/api/v1/products?category=gadgets').set('Authorization', `Bearer ${customerToken}`);
+    expect(unknown.status).toBe(400);
+    expect(unknown.body.error.code).toBe('VALIDATION_ERROR');
+  });
 });

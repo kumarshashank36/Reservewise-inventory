@@ -1,8 +1,9 @@
 import { AppError } from '../errors/AppError.js';
 import { Product } from '../models/Product.js';
 
-export async function listCatalogProducts({ page, limit }) {
+export async function listCatalogProducts({ page, limit, category }) {
   const filter = { isActive: true };
+  if (category) filter.category = category;
   const [products, total] = await Promise.all([
     Product.find(filter).sort({ name: 1 }).skip((page - 1) * limit).limit(limit),
     Product.countDocuments(filter)
@@ -24,7 +25,7 @@ export async function createProduct(input) {
 
 export async function updateProduct(productId, input) {
   const update = {};
-  for (const key of ['name', 'description', 'priceCents', 'isActive']) {
+  for (const key of ['name', 'description', 'category', 'priceCents', 'isActive']) {
     if (input[key] !== undefined) update[key] = input[key];
   }
 

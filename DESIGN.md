@@ -69,6 +69,7 @@ Indexes: `{ email: 1 }` unique.
   sku: String,                // unique, immutable after creation
   name: String,
   description: String,
+  category: String,           // electronics | furniture | clothing | home | stationery | misc
   priceCents: Number,
   onHand: Number,             // non-negative integer
   reserved: Number,           // non-negative integer
@@ -80,7 +81,7 @@ Indexes: `{ email: 1 }` unique.
 
 `available = onHand - reserved`. MongoDB’s `$expr` condition enforces sufficient available stock on each reservation update. Inventory adjustments use `$expr` to preserve `onHand >= reserved`.
 
-Indexes: `{ sku: 1 }` unique, `{ isActive: 1, name: 1 }`.
+Indexes: `{ sku: 1 }` unique, `{ isActive: 1, category: 1, name: 1 }`.
 
 ### `reservations`
 
@@ -134,7 +135,7 @@ List endpoints accept `?page=1&limit=20` (page ≥ 1, limit 1–100) and return 
 | Auth | `POST /auth/register` | public | create customer account |
 | Auth | `POST /auth/login` | public | return JWT and user; body carries the selected sign-in type and valid credentials whose account role does not match it are rejected with `ROLE_MISMATCH` |
 | Auth | `GET /auth/me` | authenticated | restore user identity |
-| Products | `GET /products` | authenticated | active product catalog with availability |
+| Products | `GET /products` | authenticated | active product catalog with availability; optional `?category=` filter |
 | Wishlist | `GET /wishlist` | customer | own saved products with live availability |
 | Wishlist | `POST /wishlist` | customer | add a product (idempotent) |
 | Wishlist | `DELETE /wishlist/:productId` | customer | remove a product (idempotent) |

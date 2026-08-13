@@ -10,6 +10,7 @@ function publicProduct(product) {
     sku: product.sku,
     name: product.name,
     description: product.description,
+    category: product.category,
     priceCents: product.priceCents,
     isActive: product.isActive,
     onHand: product.onHand,

@@ -82,8 +82,9 @@ describe('AdminInventory', () => {
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New Item' } });
     fireEvent.change(screen.getByLabelText('Price (cents)'), { target: { value: '100' } });
     fireEvent.change(screen.getByLabelText('On hand'), { target: { value: '4' } });
+    fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'furniture' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add product' }));
-    await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith('admin-token', expect.objectContaining({ sku: 'NEW-01', priceCents: 100, onHand: 4 })));
+    await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith('admin-token', expect.objectContaining({ sku: 'NEW-01', priceCents: 100, onHand: 4, category: 'furniture' })));
 
     fireEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
     await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith('admin-token', 'p1', { isActive: false }));
