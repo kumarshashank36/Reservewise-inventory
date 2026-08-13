@@ -14,6 +14,7 @@ export function AppShell({ children }) {
         {admin ? <>
           <NavLink to="/admin" end>Inventory</NavLink>
           <NavLink to="/admin/reservations">Reservations</NavLink>
+          <NavLink to="/admin/users">Team</NavLink>
         </> : <>
           <NavLink to="/app" end>Catalog</NavLink>
           <NavLink to="/app/reservations">My reservations</NavLink>

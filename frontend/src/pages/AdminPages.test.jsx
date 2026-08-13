@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext } from '../context/AuthContext.jsx';
 import { ApiError, api } from '../services/api.js';
-import { AdminInventory, AdminReservations } from './AdminPages.jsx';
+import { AdminInventory, AdminReservations, AdminUsers } from './AdminPages.jsx';
 
 vi.mock('../services/api.js', () => {
   class MockApiError extends Error {
@@ -10,7 +10,7 @@ vi.mock('../services/api.js', () => {
   }
   return {
     ApiError: MockApiError,
-    api: { register: vi.fn(), login: vi.fn(), me: vi.fn(), products: vi.fn(), reservations: vi.fn(), createReservation: vi.fn(), cancelReservation: vi.fn(), completeReservation: vi.fn(), adminProducts: vi.fn(), createProduct: vi.fn(), updateProduct: vi.fn(), adminReservations: vi.fn() }
+    api: { register: vi.fn(), login: vi.fn(), me: vi.fn(), products: vi.fn(), reservations: vi.fn(), createReservation: vi.fn(), cancelReservation: vi.fn(), completeReservation: vi.fn(), adminProducts: vi.fn(), createProduct: vi.fn(), updateProduct: vi.fn(), adminReservations: vi.fn(), adminUsers: vi.fn(), createUser: vi.fn(), deactivateUser: vi.fn(), reactivateUser: vi.fn() }
   };
 });
 
@@ -98,5 +98,78 @@ describe('AdminReservations', () => {
     await screen.findByText(/Jamie/);
     expect(screen.getByText(/jamie@example.com/)).toBeInTheDocument();
     expect(screen.getByText('LAMP-01 × 2')).toBeInTheDocument();
+  });
+});
+
+describe('AdminUsers', () => {
+  it('lists team accounts and provisions a new administrator', async () => {
+    api.adminUsers.mockResolvedValue({ payload: { users: [{ id: 'a1', name: 'Inventory Admin', email: 'admin@example.com', role: 'admin', createdAt: new Date().toISOString() }] } });
+    api.createUser.mockResolvedValue({ payload: { user: { id: 'a2', name: 'Second Admin', email: 'second@example.com', role: 'admin' } } });
+    renderWithAuth(<AdminUsers />);
+
+    await screen.findByText('Inventory Admin');
+    expect(screen.getByText('admin')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Second Admin' } });
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'second@example.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-long-enough-password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
+
+    await waitFor(() => expect(api.createUser).toHaveBeenCalledWith('admin-token', { name: 'Second Admin', email: 'second@example.com', password: 'a-long-enough-password', role: 'admin' }));
+  });
+
+  it('sends the selected role and surfaces provisioning errors', async () => {
+    api.adminUsers.mockResolvedValue({ payload: { users: [] } });
+    api.createUser.mockRejectedValue(new ApiError('An account already exists for this email address', { status: 409, code: 'EMAIL_ALREADY_REGISTERED' }));
+    renderWithAuth(<AdminUsers />);
+
+    await screen.findByText('No accounts yet');
+
+    fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Duplicate' } });
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'dup@example.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-long-enough-password' } });
+    fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'customer' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
+
+    await screen.findByText('An account already exists for this email address');
+    expect(api.createUser).toHaveBeenCalledWith('admin-token', expect.objectContaining({ role: 'customer' }));
+  });
+
+  it('offers deactivation only for customers and confirms inline before deleting', async () => {
+    api.adminUsers.mockResolvedValue({ payload: { users: [
+      { id: 'u1', name: 'Jamie', email: 'jamie@example.com', role: 'customer', createdAt: new Date().toISOString(), deletedAt: null },
+      { id: 'a1', name: 'Inventory Admin', email: 'admin@example.com', role: 'admin', createdAt: new Date().toISOString(), deletedAt: null }
+    ] } });
+    api.deactivateUser.mockResolvedValue({ payload: { user: { id: 'u1', deletedAt: new Date().toISOString() } } });
+    renderWithAuth(<AdminUsers />);
+
+    await screen.findByText('Jamie');
+    // Only the customer row offers deactivation.
+    expect(screen.getAllByRole('button', { name: 'Deactivate' })).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
+    expect(screen.getByRole('button', { name: 'Confirm' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Keep' }));
+    expect(screen.queryByRole('button', { name: 'Confirm' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+    await waitFor(() => expect(api.deactivateUser).toHaveBeenCalledWith('admin-token', 'u1'));
+  });
+
+  it('shows deactivated customers with a badge and a reactivate action', async () => {
+    api.adminUsers.mockResolvedValue({ payload: { users: [
+      { id: 'u2', name: 'Former Customer', email: 'former@example.com', role: 'customer', createdAt: new Date().toISOString(), deletedAt: new Date().toISOString() }
+    ] } });
+    api.reactivateUser.mockResolvedValue({ payload: { user: { id: 'u2', deletedAt: null } } });
+    renderWithAuth(<AdminUsers />);
+
+    await screen.findByText('Former Customer');
+    expect(screen.getByText('deactivated')).toBeInTheDocument();
+    expect(screen.getByText(/Deactivated/)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Deactivate' })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reactivate' }));
+    await waitFor(() => expect(api.reactivateUser).toHaveBeenCalledWith('admin-token', 'u2'));
   });
 });

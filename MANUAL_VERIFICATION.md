@@ -34,12 +34,16 @@ HOLD_MINUTES=1 npm run verify:ui
 4. **Expected:** you land in the customer workspace with a sidebar (Catalog / My reservations) and your name bottom-left.
    *Rule: validation; role-based workspace.*
 
-### 3. Login
+### 3. Login (with role toggle)
 
-1. Sign out (↗ button, bottom of sidebar) → **Sign in** with a wrong password.
-2. **Expected:** "Email or password is incorrect" error.
-3. Sign in with the correct password.
-4. **Expected:** you return to the customer workspace.
+1. Sign out (↗ button, bottom of sidebar) → the sign-in screen shows a **Customer / Admin** toggle with **Customer** selected by default.
+2. Enter your customer email and a wrong password → submit.
+3. **Expected:** "Email or password is incorrect" error (no hint about whether the email exists).
+4. Enter your customer email with the correct password but keep **Admin** selected → submit.
+5. **Expected:** "This is a customer account. Select the Customer sign-in type and try again." error.
+6. Switch the toggle to **Customer** and sign in.
+7. **Expected:** you return to the customer workspace.
+   *Rule: the backend enforces that the account role matches the selected sign-in type; the redirect follows the authenticated role.*
 
 ### 4. Catalog
 
@@ -93,7 +97,7 @@ HOLD_MINUTES=1 npm run verify:ui
 
 ### 12. Admin inventory
 
-1. Sign in as `admin@example.com`.
+1. Sign in as `admin@example.com` with the **Admin** toggle selected (the **Customer** toggle rejects this account with a role-mismatch error).
 2. **Expected:** the inventory table shows every product with **Available / Reserved / On hand** columns and Active/Inactive status. Customer-only routes redirect here; admin-only routes redirect customers away.
 
 ### 13. Admin stock adjustment (safe reductions)
@@ -125,6 +129,28 @@ HOLD_MINUTES=1 npm run verify:ui
 
 1. Narrow the browser below 700px.
 2. **Expected:** the sidebar becomes a top bar, the inventory table becomes stacked cards with labelled values, the cart moves below the product grid, and forms become single-column.
+
+### 18. Admin team provisioning
+
+1. As admin, open **Team** in the sidebar.
+2. **Expected:** every account is listed with name, email, role badge, and creation date.
+3. Fill the form to add a new **Admin** account (name, unique email, 10+ character password) → **Add account**.
+4. **Expected:** the account appears in the list; a duplicate email or a short password shows an error.
+5. Sign out, then sign in as the new account with the **Admin** toggle → lands in the admin workspace.
+6. **Expected:** signing in as that same account with the **Customer** toggle shows the role-mismatch error.
+   *Rule: open self-registration stays customer-only; only admins can provision admin accounts.*
+
+### 19. Customer deactivation (soft delete)
+
+1. Register a fresh customer, then as admin open **Team**.
+2. **Expected:** the customer row has a **Deactivate** button; admin rows do not.
+3. Click **Deactivate** → the row switches to **Confirm / Keep**; click **Confirm**.
+4. **Expected:** the row now shows a **deactivated** badge with the deactivation time, and the button is gone.
+5. In the customer's browser (or after signing out and trying to sign in as them): refreshing a page they had open signs them out, and signing in shows "This account has been deactivated. Contact an administrator for help."
+6. **Expected:** their reservation history still appears in the admin Reservations audit view.
+7. Back in **Team**, click **Reactivate** on the deactivated row.
+8. **Expected:** the badge flips back to **customer**, sign-in works again, and even the session that was open before deactivation becomes valid again on refresh.
+   *Rule: only customers can be soft-deleted; their data is retained, their sessions die immediately while deactivated, and reactivation restores access.*
 
 ## What is NOT manually verifiable via the UI (by design)
 

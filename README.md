@@ -48,7 +48,7 @@ Prerequisites: Node.js 20+, npm, and Docker Desktop.
    npm run dev:frontend
    ```
 
-Open `http://localhost:5173`. Customers can register themselves. The seeded admin signs in as `admin@example.com` with the `SEED_ADMIN_PASSWORD` used above.
+Open `http://localhost:5173`. Customers can register themselves. The sign-in screen asks for a Customer or Admin sign-in type and the API rejects accounts whose role does not match the selection. The seeded admin signs in as `admin@example.com` (Admin sign-in type) with the `SEED_ADMIN_PASSWORD` used above; additional customer or admin accounts can be provisioned from the admin **Team** page, and customer accounts can be soft-deleted and reactivated there (administrators cannot be deleted).
 
 The reservation hold window defaults to 10 minutes; set `HOLD_MINUTES=1` in `backend/.env` (or prefix a dev command with it) to shorten holds while demoing expiry.
 

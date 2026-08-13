@@ -10,6 +10,7 @@ import healthRoutes from './routes/healthRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import reservationRoutes from './routes/reservationRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
 export function createApp() {
   const app = express();
@@ -24,6 +25,7 @@ export function createApp() {
   app.use('/api/v1/auth', authRoutes);
   app.use('/api/v1', productRoutes);
   app.use('/api/v1', reservationRoutes);
+  app.use('/api/v1', userRoutes);
   app.use(notFound);
   app.use(errorHandler);
 

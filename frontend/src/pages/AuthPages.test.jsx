@@ -29,16 +29,49 @@ beforeEach(() => { vi.clearAllMocks(); });
 afterEach(cleanup);
 
 describe('AuthPage login', () => {
-  it('logs a customer in and stores the returned session', async () => {
+  it('signs a customer in with the Customer toggle selected by default', async () => {
     const session = { token: 't', user: { id: 'u1', name: 'Jamie', email: 'jamie@example.com', role: 'customer' } };
     api.login.mockResolvedValue({ payload: session });
     renderAuthPage('login');
+
+    expect(screen.getByRole('radio', { name: 'Customer' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Admin' })).toHaveAttribute('aria-checked', 'false');
 
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'jamie@example.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-long-enough-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
+    await waitFor(() => expect(api.login).toHaveBeenCalledWith({ email: 'jamie@example.com', password: 'a-long-enough-password', role: 'customer' }));
     await waitFor(() => expect(anonymousAuth.saveSession).toHaveBeenCalledWith(session));
+  });
+
+  it('sends the Admin sign-in type when the toggle is switched', async () => {
+    const session = { token: 't', user: { id: 'a1', name: 'Inventory Admin', email: 'admin@example.com', role: 'admin' } };
+    api.login.mockResolvedValue({ payload: session });
+    renderAuthPage('login');
+
+    fireEvent.click(screen.getByRole('radio', { name: 'Admin' }));
+    expect(screen.getByRole('radio', { name: 'Admin' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('radio', { name: 'Customer' })).toHaveAttribute('aria-checked', 'false');
+
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'admin@example.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-long-enough-password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await waitFor(() => expect(api.login).toHaveBeenCalledWith({ email: 'admin@example.com', password: 'a-long-enough-password', role: 'admin' }));
+    await waitFor(() => expect(anonymousAuth.saveSession).toHaveBeenCalledWith(session));
+  });
+
+  it('shows the role-mismatch error when the account does not match the selected toggle', async () => {
+    api.login.mockRejectedValue(new ApiError('This is an admin account. Select the Admin sign-in type and try again.', { status: 403, code: 'ROLE_MISMATCH' }));
+    renderAuthPage('login');
+
+    fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'admin@example.com' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-long-enough-password' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
+
+    await screen.findByRole('alert');
+    expect(screen.getByText('This is an admin account. Select the Admin sign-in type and try again.')).toBeInTheDocument();
   });
 
   it('shows the server error when the credentials are wrong', async () => {

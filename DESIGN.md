@@ -116,7 +116,7 @@ All endpoints are prefixed with `/api/v1`. Errors use `{ error: { code, message,
 | --- | --- | --- | --- |
 | Health | `GET /health` | public | liveness/readiness check |
 | Auth | `POST /auth/register` | public | create customer account |
-| Auth | `POST /auth/login` | public | return JWT and user |
+| Auth | `POST /auth/login` | public | return JWT and user; body carries the selected sign-in type and valid credentials whose account role does not match it are rejected with `ROLE_MISMATCH` |
 | Auth | `GET /auth/me` | authenticated | restore user identity |
 | Products | `GET /products` | authenticated | active product catalog with availability |
 | Reservations | `POST /reservations` | customer | atomically reserve products; requires `Idempotency-Key` |
@@ -128,12 +128,18 @@ All endpoints are prefixed with `/api/v1`. Errors use `{ error: { code, message,
 | Admin products | `POST /admin/products` | admin | create product |
 | Admin products | `PATCH /admin/products/:id` | admin | update metadata/status or stock safely |
 | Admin reservations | `GET /admin/reservations` | admin | review all reservations |
+| Admin users | `GET /admin/users` | admin | list all accounts (no password hashes) |
+| Admin users | `POST /admin/users` | admin | provision a customer or admin account |
+| Admin users | `DELETE /admin/users/:id` | admin | soft-delete a customer account (admins are rejected; the record and its reservations are retained) |
+| Admin users | `POST /admin/users/:id/activate` | admin | reactivate a soft-deleted account (idempotent no-op for active accounts) |
 
 ## Customer and admin flows
 
 Customer: register/login → browse active catalog and available quantities → choose products and quantities → send reservation with a generated idempotency key → view pending countdown/history → complete or cancel the reservation. A retry reuses the same key until a response is obtained.
 
-Admin: login → create/edit/deactivate products and adjust on-hand inventory → see all reservations, status, item snapshots, and timestamps. The UI displays a clear validation error if a stock reduction would conflict with reservations.
+Admin: login → create/edit/deactivate products and adjust on-hand inventory → see all reservations, status, item snapshots, and timestamps → provision customer or administrator accounts from the Team page, soft-delete customer accounts, and reactivate them later (open self-registration stays customer-only, so no one can self-promote to admin). A soft-deleted customer keeps their reservation history, can no longer sign in, and their issued tokens stop working immediately; any pending holds they had release through the normal expiry worker. Reactivation restores sign-in and unexpired pre-deactivation tokens. The UI displays a clear validation error if a stock reduction would conflict with reservations.
+
+Login presents a Customer/Admin sign-in type choice. The API verifies credentials first and returns the same generic `INVALID_CREDENTIALS` for a missing account or wrong password (so the response never reveals account existence), then rejects valid credentials whose account role does not match the selection with `403 ROLE_MISMATCH`. Role enforcement after login is unchanged: the JWT carries the role, `authenticate` re-reads the user from the database on every request, and `authorize` gates each route.
 
 ## Reservation, concurrency, expiration, and idempotency strategy
 

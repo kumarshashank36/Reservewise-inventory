@@ -18,7 +18,7 @@ async function register(email) {
 async function createProduct({ sku = 'ITEM-01', name = 'Reserved Item', onHand = 5, priceCents = 9900 } = {}) {
   const customerToken = await register(`admin-${sku}@example.com`);
   await User.updateOne({ email: `admin-${sku}@example.com` }, { role: 'admin' });
-  const admin = await request(app).post('/api/v1/auth/login').send({ email: `admin-${sku}@example.com`, password });
+  const admin = await request(app).post('/api/v1/auth/login').send({ email: `admin-${sku}@example.com`, password, role: 'admin' });
   const response = await request(app).post('/api/v1/admin/products').set('Authorization', `Bearer ${admin.body.token}`)
     .send({ sku, name, onHand, priceCents });
   return response.body.product;

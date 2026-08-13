@@ -12,6 +12,7 @@ export async function authenticate(req, res, next) {
     const payload = jwt.verify(header.slice(7), env.JWT_SECRET);
     const user = await User.findById(payload.sub);
     if (!user) throw new AppError(401, 'INVALID_TOKEN', 'The token belongs to a deleted account');
+    if (user.deletedAt) throw new AppError(401, 'ACCOUNT_DEACTIVATED', 'This account has been deactivated');
     req.user = { id: user._id.toString(), name: user.name, email: user.email, role: user.role };
     return next();
   } catch (error) {

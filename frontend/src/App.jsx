@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { AppShell } from './components/AppShell.jsx';
 import { AuthPage } from './pages/AuthPages.jsx';
 import { CustomerCatalog, CustomerReservations } from './pages/CustomerPages.jsx';
-import { AdminInventory, AdminReservations } from './pages/AdminPages.jsx';
+import { AdminInventory, AdminReservations, AdminUsers } from './pages/AdminPages.jsx';
 
 function LandingPage() {
   return (
@@ -46,7 +46,7 @@ export default function App() {
     <AuthProvider><Routes>
       <Route path="/" element={<LandingPage />} /><Route path="/login" element={<AuthPage mode="login" />} /><Route path="/register" element={<AuthPage mode="register" />} />
       <Route path="/app" element={<Protected role="customer"><CustomerCatalog /></Protected>} /><Route path="/app/reservations" element={<Protected role="customer"><CustomerReservations /></Protected>} />
-      <Route path="/admin" element={<Protected role="admin"><AdminInventory /></Protected>} /><Route path="/admin/reservations" element={<Protected role="admin"><AdminReservations /></Protected>} />
+      <Route path="/admin" element={<Protected role="admin"><AdminInventory /></Protected>} /><Route path="/admin/reservations" element={<Protected role="admin"><AdminReservations /></Protected>} /><Route path="/admin/users" element={<Protected role="admin"><AdminUsers /></Protected>} />
       <Route path="*" element={<LandingPage />} />
     </Routes></AuthProvider>
   );

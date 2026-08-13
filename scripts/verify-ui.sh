@@ -110,11 +110,13 @@ cat <<CHECKLIST
 
 Manual UI verification checklist
 ────────────────────────────────
-Admin sign-in: admin@example.com / password from SEED_ADMIN_PASSWORD (default: verify-local-password-123)
+Admin sign-in: admin@example.com (select the Admin sign-in type) / password from SEED_ADMIN_PASSWORD (default: verify-local-password-123)
 
  1. LANDING      The hero page loads with sign-in and register links.
  2. REGISTER     Create a customer. A password under 10 chars shows a validation error.
- 3. LOGIN        A wrong password shows an error; the right one lands in the customer workspace.
+ 3. LOGIN        Pick Customer or Admin on the sign-in toggle. A wrong password shows a generic error;
+                 a correct password with the wrong toggle shows a role-mismatch error; the matching
+                 toggle lands in the right workspace.
  4. CATALOG      Three seeded products appear with availability; steppers stop at 0 and at available.
  5. RESERVE      Pick quantities → Reserve inventory → success notice with the hold length; availability drops.
  6. COUNTDOWN    My reservations shows a ticking "Expires in m:ss" per pending reservation.
@@ -131,6 +133,11 @@ Admin sign-in: admin@example.com / password from SEED_ADMIN_PASSWORD (default: v
 15. ADMIN AUDIT  Reservations shows every customer's holds with item snapshots and timestamps.
 16. SESSION      Refresh the page (still signed in); sign out; visiting /admin as a customer redirects to /app (and vice versa).
 17. RESPONSIVE   Narrow the window below 700px: sidebar becomes a top bar and tables become cards.
+18. TEAM         As admin, open Team: add a new admin account, sign in with it (Admin toggle), and confirm the
+                 customer toggle rejects it with a role-mismatch error.
+19. DEACTIVATE   Register a customer, then from Team deactivate them: badge flips to deactivated, their open
+                 session dies on refresh, and sign-in shows the account-deactivated message. Admin rows have
+                 no Deactivate button. Reactivate restores sign-in and the badge flips back.
 
 Fast path for the 10-minute expiry (scenario 9):
   Stop this script (Ctrl+C), then run:  HOLD_MINUTES=1 npm run verify:ui
@@ -138,7 +145,7 @@ Fast path for the 10-minute expiry (scenario 9):
   return within ~30s (the expiry worker interval).
 
 Detailed steps and expected outcomes: MANUAL_VERIFICATION.md
-Automated equivalents: npm test  (backend 26 tests, frontend 19 tests)
+Automated equivalents: npm test  (backend 31 tests, frontend 21 tests)
 
 Note: the seed step above resets the seeded admin's password to SEED_ADMIN_PASSWORD.
 Press Ctrl+C when you are done (services this script started stop; MongoDB keeps running).
