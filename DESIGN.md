@@ -70,6 +70,7 @@ Indexes: `{ email: 1 }` unique.
   name: String,
   description: String,
   category: String,           // electronics | furniture | clothing | home | stationery | misc
+  imageUrl: String,           // optional product photo; UI falls back to category art
   priceCents: Number,
   onHand: Number,             // non-negative integer
   reserved: Number,           // non-negative integer

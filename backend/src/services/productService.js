@@ -25,7 +25,7 @@ export async function createProduct(input) {
 
 export async function updateProduct(productId, input) {
   const update = {};
-  for (const key of ['name', 'description', 'category', 'priceCents', 'isActive']) {
+  for (const key of ['name', 'description', 'category', 'imageUrl', 'priceCents', 'isActive']) {
     if (input[key] !== undefined) update[key] = input[key];
   }
 

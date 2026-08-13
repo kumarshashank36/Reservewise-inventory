@@ -11,6 +11,7 @@ function publicProduct(product) {
     name: product.name,
     description: product.description,
     category: product.category,
+    imageUrl: product.imageUrl,
     priceCents: product.priceCents,
     isActive: product.isActive,
     onHand: product.onHand,

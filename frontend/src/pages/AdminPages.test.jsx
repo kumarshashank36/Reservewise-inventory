@@ -29,43 +29,47 @@ beforeEach(() => { vi.clearAllMocks(); });
 afterEach(cleanup);
 
 describe('AdminInventory', () => {
-  it('lists inventory and updates on-hand stock inline', async () => {
-    api.adminProducts.mockResolvedValue({ payload: { products: [product()] } });
-    api.updateProduct.mockResolvedValue({ payload: { product: product({ onHand: 2, available: 2 }) } });
+  it('lists inventory with thumbnails and edits a product through the form', async () => {
+    api.adminProducts.mockResolvedValue({ payload: { products: [product({ imageUrl: 'https://example.com/lamp.jpg', category: 'electronics' })] } });
+    api.updateProduct.mockResolvedValue({ payload: { product: product({ name: 'Renamed Lamp', onHand: 2, available: 2 }) } });
     renderWithAuth(<AdminInventory />);
     await screen.findByText('Desk Lamp');
+    expect(screen.getByRole('img', { name: 'Desk Lamp' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Adjust' }));
-    const input = screen.getByRole('spinbutton', { name: 'On-hand quantity for Desk Lamp' });
-    fireEvent.change(input, { target: { value: '2' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    const nameInput = screen.getByLabelText('Name');
+    expect(nameInput).toHaveValue('Desk Lamp');
+    expect(screen.getByLabelText('SKU')).toBeDisabled(); // SKU is immutable
+    fireEvent.change(nameInput, { target: { value: 'Renamed Lamp' } });
+    fireEvent.change(screen.getByLabelText('On hand'), { target: { value: '2' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
-    await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith('admin-token', 'p1', { onHand: 2 }));
-    await waitFor(() => expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument());
+    await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith('admin-token', 'p1', expect.objectContaining({ name: 'Renamed Lamp', onHand: 2, category: 'electronics', imageUrl: 'https://example.com/lamp.jpg' })));
+    await waitFor(() => expect(screen.queryByLabelText('Name')).not.toBeInTheDocument());
   });
 
-  it('rejects a stock value below currently reserved units with an inline error', async () => {
-    api.adminProducts.mockResolvedValue({ payload: { products: [product({ onHand: 3, reserved: 2, available: 1 })] } });
+  it('rejects a stock value below currently reserved units when editing', async () => {
+    api.adminProducts.mockResolvedValue({ payload: { products: [product({ onHand: 3, reserved: 2, available: 1, category: 'electronics' })] } });
     renderWithAuth(<AdminInventory />);
     await screen.findByText('Desk Lamp');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Adjust' }));
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'On-hand quantity for Desk Lamp' }), { target: { value: '1' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    fireEvent.change(screen.getByLabelText('On hand'), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await screen.findByText(/cannot be reduced below currently reserved inventory \(2\)/);
     expect(api.updateProduct).not.toHaveBeenCalled();
   });
 
   it('surfaces the server conflict when the API rejects a stock update', async () => {
-    api.adminProducts.mockResolvedValue({ payload: { products: [product({ reserved: 2, available: 1 })] } });
+    api.adminProducts.mockResolvedValue({ payload: { products: [product({ reserved: 2, available: 1, category: 'electronics' })] } });
     api.updateProduct.mockRejectedValue(new ApiError('On-hand inventory cannot be reduced below currently reserved inventory', { status: 409, code: 'INVENTORY_BELOW_RESERVED' }));
     renderWithAuth(<AdminInventory />);
     await screen.findByText('Desk Lamp');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Adjust' }));
-    fireEvent.change(screen.getByRole('spinbutton', { name: 'On-hand quantity for Desk Lamp' }), { target: { value: '5' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    fireEvent.change(screen.getByLabelText('On hand'), { target: { value: '5' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }));
 
     await screen.findByText('On-hand inventory cannot be reduced below currently reserved inventory');
   });
@@ -83,8 +87,9 @@ describe('AdminInventory', () => {
     fireEvent.change(screen.getByLabelText('Price (cents)'), { target: { value: '100' } });
     fireEvent.change(screen.getByLabelText('On hand'), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'furniture' } });
+    fireEvent.change(screen.getByLabelText('Image URL'), { target: { value: 'https://example.com/new-item.jpg' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add product' }));
-    await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith('admin-token', expect.objectContaining({ sku: 'NEW-01', priceCents: 100, onHand: 4, category: 'furniture' })));
+    await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith('admin-token', expect.objectContaining({ sku: 'NEW-01', priceCents: 100, onHand: 4, category: 'furniture', imageUrl: 'https://example.com/new-item.jpg' })));
 
     fireEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
     await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith('admin-token', 'p1', { isActive: false }));

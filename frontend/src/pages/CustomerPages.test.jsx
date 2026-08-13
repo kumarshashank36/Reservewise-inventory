@@ -213,6 +213,19 @@ describe('CustomerCatalog', () => {
     await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 10, category: 'furniture' }));
     expect(screen.getByRole('tab', { name: 'Furniture' })).toHaveAttribute('aria-selected', 'true');
   });
+
+  it('renders product images with a graceful category fallback', async () => {
+    api.products.mockResolvedValue({ payload: { products: [product({ imageUrl: 'https://example.com/desk-lamp.jpg', category: 'home' })], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    renderWithAuth(<CustomerCatalog />);
+
+    await screen.findByText('Desk Lamp');
+    const image = screen.getByRole('img', { name: 'Desk Lamp' });
+    expect(image).toHaveAttribute('src', 'https://example.com/desk-lamp.jpg');
+
+    // A failing image is replaced by the per-category gradient tile.
+    fireEvent.error(image);
+    await screen.findByRole('img', { name: 'Desk Lamp — Home & Living artwork' });
+  });
 });
 
 describe('CustomerReservations pagination', () => {

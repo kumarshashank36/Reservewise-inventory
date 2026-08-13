@@ -4,6 +4,7 @@ import { useWishlist } from '../context/WishlistContext.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/AsyncState.jsx';
 import { PageHeader } from '../components/AppShell.jsx';
 import { Pagination } from '../components/Pagination.jsx';
+import { ProductImage } from '../components/ProductImage.jsx';
 import { categoryLabel } from '../categories.js';
 import { api } from '../services/api.js';
 
@@ -92,6 +93,7 @@ export function CustomerWishlist() {
       const available = product.isActive ? product.available : 0;
       const quantity = quantities[product._id] ?? 0;
       return <article className="reservation-row" key={product._id}>
+        <ProductImage product={product} className="wishlist-thumb" />
         <div className="reservation-primary">
           <div className="reservation-title"><strong>{product.name}</strong><span className={available ? 'stock-live' : 'stock-empty'}>{available ? `${available} available` : 'Unavailable'}</span></div>
           <span>{product.sku}{categoryLabel(product.category) ? ` · ${categoryLabel(product.category)}` : ''} · {money(product.priceCents)}</span>

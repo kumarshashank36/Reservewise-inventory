@@ -7,6 +7,7 @@ const productSchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true, minlength: 2, maxlength: 160 },
     description: { type: String, trim: true, maxlength: 1000, default: '' },
     category: { type: String, enum: [...PRODUCT_CATEGORIES, 'misc'], default: 'misc', index: true },
+    imageUrl: { type: String, trim: true, maxlength: 500, default: '' },
     priceCents: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
     onHand: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
     reserved: { type: Number, required: true, min: 0, default: 0, validate: Number.isSafeInteger },

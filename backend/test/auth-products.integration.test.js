@@ -58,9 +58,9 @@ describe('auth and inventory API', () => {
     const created = await request(app)
       .post('/api/v1/admin/products')
       .set('Authorization', `Bearer ${admin}`)
-      .send({ sku: 'CHAIR-01', name: 'Task Chair', description: 'A precise chair', priceCents: 12900, onHand: 7 });
+      .send({ sku: 'CHAIR-01', name: 'Task Chair', description: 'A precise chair', priceCents: 12900, onHand: 7, category: 'furniture', imageUrl: 'https://example.com/chair.jpg' });
     expect(created.status).toBe(201);
-    expect(created.body.product).toMatchObject({ sku: 'CHAIR-01', available: 7, reserved: 0 });
+    expect(created.body.product).toMatchObject({ sku: 'CHAIR-01', available: 7, reserved: 0, category: 'furniture', imageUrl: 'https://example.com/chair.jpg' });
 
     const catalog = await request(app).get('/api/v1/products').set('Authorization', `Bearer ${customer.body.token}`);
     expect(catalog.status).toBe(200);
@@ -74,6 +74,30 @@ describe('auth and inventory API', () => {
 
     const hiddenCatalog = await request(app).get('/api/v1/products').set('Authorization', `Bearer ${customer.body.token}`);
     expect(hiddenCatalog.body.products).toHaveLength(0);
+  });
+
+  it('updates product details including category and image, and can clear the image', async () => {
+    const admin = await adminToken();
+    const created = await request(app)
+      .post('/api/v1/admin/products')
+      .set('Authorization', `Bearer ${admin}`)
+      .send({ sku: 'EDIT-01', name: 'Editable Item', priceCents: 1000, onHand: 5, category: 'home', imageUrl: 'https://example.com/before.jpg' });
+    const productId = created.body.product._id;
+
+    const updated = await request(app)
+      .patch(`/api/v1/admin/products/${productId}`)
+      .set('Authorization', `Bearer ${admin}`)
+      .send({ name: 'Renamed Item', description: 'Now described', priceCents: 2400, category: 'furniture', imageUrl: 'https://example.com/after.jpg' });
+    expect(updated.status).toBe(200);
+    expect(updated.body.product).toMatchObject({ name: 'Renamed Item', description: 'Now described', priceCents: 2400, category: 'furniture', imageUrl: 'https://example.com/after.jpg' });
+    expect(updated.body.product.sku).toBe('EDIT-01'); // SKU stays immutable
+
+    const cleared = await request(app)
+      .patch(`/api/v1/admin/products/${productId}`)
+      .set('Authorization', `Bearer ${admin}`)
+      .send({ imageUrl: '' });
+    expect(cleared.status).toBe(200);
+    expect(cleared.body.product.imageUrl).toBe('');
   });
 
   it('refuses an inventory adjustment that conflicts with existing reservations', async () => {
@@ -289,6 +313,11 @@ describe('auth and inventory API', () => {
       .send({ name: 'Weird', email: 'weird@example.com', password: 'long-enough-password', role: 'superuser' });
     expect(invalidRole.status).toBe(400);
     expect(invalidRole.body.error.code).toBe('VALIDATION_ERROR');
+
+    const invalidImage = await request(app).post('/api/v1/admin/products').set('Authorization', `Bearer ${admin}`)
+      .send({ sku: 'BAD-IMG', name: 'Bad Image', priceCents: 100, onHand: 1, imageUrl: 'not-a-url' });
+    expect(invalidImage.status).toBe(400);
+    expect(invalidImage.body.error.code).toBe('VALIDATION_ERROR');
   });
 
   it('lets admins soft-delete customers while preserving their audit data', async () => {

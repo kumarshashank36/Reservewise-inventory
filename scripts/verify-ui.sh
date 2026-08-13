@@ -131,7 +131,8 @@ Admin sign-in: admin@example.com (select the Admin sign-in type) / password from
                  two customers reserve the last unit simultaneously → one succeeds, one shows the
                  insufficient-inventory error. (Automated: 8-way contention + cross-customer tests.)
 12. ADMIN        Sign in as admin → inventory table shows available / reserved / on-hand.
-13. ADMIN STOCK  Adjust on-hand → entering a value below reserved shows an inline error; a valid value saves.
+13. ADMIN EDIT   Rows show photo thumbnails. Edit opens the prefilled form (SKU locked): update name, price,
+                 category, image, description, or on-hand; a value below reserved shows an inline error.
 14. ADMIN CTRL   Add a product (appears in the customer catalog); deactivate one (disappears); reactivate it.
 15. ADMIN AUDIT  Reservations shows every customer's holds with item snapshots and timestamps.
 16. SESSION      Refresh the page (still signed in); sign out; visiting /admin as a customer redirects to /app (and vice versa).

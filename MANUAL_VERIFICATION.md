@@ -48,7 +48,7 @@ HOLD_MINUTES=1 npm run verify:ui
 ### 4. Catalog
 
 1. Open **Catalog**.
-2. **Expected:** seeded products with a category chip row (**All / Electronics / Furniture / Clothing / Home & Living / Stationery**), each card showing its category label, price, and units available. The stepper `+` is disabled when quantity reaches `available`, and `−` is disabled at 0.
+2. **Expected:** seeded products with a category chip row (**All / Electronics / Furniture / Clothing / Home & Living / Stationery**), each card showing a product photo, its category label, price, and units available. The stepper `+` is disabled when quantity reaches `available`, and `−` is disabled at 0. Wishlist rows show a thumbnail of the same photo.
 
 ### 5. Reserve inventory
 
@@ -105,13 +105,14 @@ HOLD_MINUTES=1 npm run verify:ui
 1. Sign in as `admin@example.com` with the **Admin** toggle selected (the **Customer** toggle rejects this account with a role-mismatch error).
 2. **Expected:** the inventory table shows every product with **Available / Reserved / On hand** columns and Active/Inactive status. Customer-only routes redirect here; admin-only routes redirect customers away.
 
-### 13. Admin stock adjustment (safe reductions)
+### 13. Admin product editing (safe reductions)
 
-1. On a product with reserved > 0, click **Adjust**, type a value **below reserved** → **Save**.
-2. **Expected:** an inline error: "On-hand inventory cannot be reduced below currently reserved inventory (N)" and the value is unchanged. (The API enforces the same rule server-side — a 409.)
-3. Type a valid value → **Save**.
-4. **Expected:** the row updates after a reload.
-   *Rule: admin adjustments never invalidate existing valid reservations.*
+1. On a product with reserved > 0, click **Edit** — the form opens prefilled (SKU locked, image thumbnail shown in the row).
+2. Type an on-hand value **below reserved** → **Save changes**.
+3. **Expected:** an inline error: "On-hand inventory cannot be reduced below currently reserved inventory (N)" and the value is unchanged. (The API enforces the same rule server-side — a 409.)
+4. Change the name, price, category, image URL, or description and type a valid on-hand → **Save changes**.
+5. **Expected:** the row updates after a reload with the new details and thumbnail.
+   *Rule: admin adjustments never invalidate existing valid reservations; SKUs are immutable.*
 
 ### 14. Admin catalog control
 
