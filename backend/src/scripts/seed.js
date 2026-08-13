@@ -13,11 +13,12 @@ async function seed() {
   if (!adminPassword || adminPassword.length < 10) throw new Error('SEED_ADMIN_PASSWORD must contain at least 10 characters');
   await connectDatabase(env.MONGODB_URI);
   const passwordHash = await bcrypt.hash(adminPassword, 12);
-  await User.updateOne(
-    { email: adminEmail },
-    { $setOnInsert: { name: 'Inventory Admin', email: adminEmail, passwordHash, role: 'admin' } },
-    { upsert: true }
-  );
+  // SEED_ADMIN_RESET=true (used by npm run verify:ui) re-applies the password so the
+  // verification checklist's admin credentials always work, even on an existing database.
+  const update = { $setOnInsert: { name: 'Inventory Admin', email: adminEmail, role: 'admin' } };
+  if (process.env.SEED_ADMIN_RESET === 'true') update.$set = { passwordHash };
+  else update.$setOnInsert.passwordHash = passwordHash;
+  await User.updateOne({ email: adminEmail }, update, { upsert: true });
   await Product.bulkWrite([
     { updateOne: { filter: { sku: 'LUMEN-DESK' }, update: { $setOnInsert: { sku: 'LUMEN-DESK', name: 'Lumen Desk Lamp', description: 'A focused LED task light with an adjustable arm.', priceCents: 12900, onHand: 12, reserved: 0, isActive: true } }, upsert: true } },
     { updateOne: { filter: { sku: 'FORM-CHAIR' }, update: { $setOnInsert: { sku: 'FORM-CHAIR', name: 'Form Task Chair', description: 'Ergonomic daily seating for focused work.', priceCents: 34900, onHand: 8, reserved: 0, isActive: true } }, upsert: true } },

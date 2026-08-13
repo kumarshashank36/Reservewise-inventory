@@ -1,10 +1,11 @@
 import mongoose from 'mongoose';
+import { env } from '../config/env.js';
 import { AppError } from '../errors/AppError.js';
 import { Product } from '../models/Product.js';
 import { Reservation } from '../models/Reservation.js';
 import { runTransaction } from './transaction.js';
 
-const HOLD_DURATION_MS = 10 * 60 * 1000;
+const HOLD_DURATION_MS = env.HOLD_MINUTES * 60 * 1000;
 
 function normaliseItems(items) {
   const quantities = new Map();
@@ -37,15 +38,32 @@ async function releaseItems(reservation, session) {
 }
 
 async function transitionPendingReservation(reservation, status, session, now) {
-  await releaseItems(reservation, session);
+  // Claim the state transition first: only one actor may move a pending reservation.
+  // The loser gets a clean conflict instead of double-releasing inventory.
   const timestampField = status === 'cancelled' ? 'cancelledAt' : 'expiredAt';
-  const result = await Reservation.updateOne(
+  const claimed = await Reservation.updateOne(
     { _id: reservation._id, status: 'pending' },
     { $set: { status, [timestampField]: now } },
     { session }
   );
-  if (result.modifiedCount !== 1) throw new Error(`Reservation ${reservation._id} state changed during transition`);
+  if (claimed.modifiedCount !== 1) {
+    throw new AppError(409, 'RESERVATION_STATE_CHANGED', `The reservation changed state before it could be ${status}`);
+  }
+  await releaseItems(reservation, session);
   return Reservation.findById(reservation._id).session(session);
+}
+
+async function consumeItems(reservation, session) {
+  for (const item of reservation.items) {
+    const result = await Product.updateOne(
+      { _id: item.productId, onHand: { $gte: item.quantity }, reserved: { $gte: item.quantity } },
+      { $inc: { onHand: -item.quantity, reserved: -item.quantity } },
+      { session }
+    );
+    if (result.modifiedCount !== 1) {
+      throw new Error(`Inventory integrity violation while completing reservation ${reservation._id}`);
+    }
+  }
 }
 
 export async function createReservation({ customerId, items, idempotencyKey }) {
@@ -143,8 +161,18 @@ export async function completeReservation(customerId, reservationId) {
     if (reservation.status !== 'pending') throw new AppError(409, 'RESERVATION_NOT_COMPLETABLE', 'Only pending reservations can be completed');
     const now = new Date();
     if (reservation.expiresAt <= now) return { expired: true, reservation: await transitionPendingReservation(reservation, 'expired', session, now) };
-    const update = await Reservation.updateOne({ _id: reservation._id, status: 'pending' }, { $set: { status: 'completed', completedAt: now } }, { session });
-    if (update.modifiedCount !== 1) throw new Error(`Reservation ${reservation._id} state changed during completion`);
+    // The claim re-checks expiry inside the update so a completion cannot land after its hold window ended.
+    const claimed = await Reservation.updateOne(
+      { _id: reservation._id, status: 'pending', expiresAt: { $gt: now } },
+      { $set: { status: 'completed', completedAt: now } },
+      { session }
+    );
+    if (claimed.modifiedCount !== 1) {
+      throw new AppError(409, 'RESERVATION_STATE_CHANGED', 'The reservation changed state before it could be completed');
+    }
+    // Completion consumes the units: onHand and reserved move together, so the sale reduces
+    // physical stock without breaking the onHand >= reserved invariant.
+    await consumeItems(reservation, session);
     return { reservation: await Reservation.findById(reservation._id).session(session) };
   });
   if (result.expired) throw new AppError(409, 'RESERVATION_EXPIRED', 'This reservation expired and its inventory was released');

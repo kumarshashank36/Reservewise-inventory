@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { api } from '../services/api.js';
 
-const AuthContext = createContext(null);
+export const AuthContext = createContext(null);
 const SESSION_KEY = 'reservewise.session';
 
 export function AuthProvider({ children }) {

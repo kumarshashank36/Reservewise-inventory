@@ -1,3 +1,4 @@
+import jwt from 'jsonwebtoken';
 import request from 'supertest';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { createApp } from '../src/app.js';
@@ -92,5 +93,60 @@ describe('auth and inventory API', () => {
     expect(response.status).toBe(409);
     expect(response.body.error.code).toBe('INVENTORY_BELOW_RESERVED');
     expect((await Product.findById(productId)).onHand).toBe(5);
+  });
+
+  it('reports a healthy response when the database is connected', async () => {
+    const response = await request(app).get('/api/v1/health');
+
+    expect(response.status).toBe(200);
+    expect(response.body).toMatchObject({ status: 'ok', database: 'connected' });
+  });
+
+  it('rejects invalid credentials, weak passwords, and duplicate emails', async () => {
+    await register('dup@example.com');
+
+    const wrongPassword = await request(app).post('/api/v1/auth/login').send({
+      email: 'dup@example.com', password: 'totally-wrong-password'
+    });
+    expect(wrongPassword.status).toBe(401);
+    expect(wrongPassword.body.error.code).toBe('INVALID_CREDENTIALS');
+
+    const weakPassword = await request(app).post('/api/v1/auth/register').send({
+      name: 'Weak Password', email: 'weak@example.com', password: 'short'
+    });
+    expect(weakPassword.status).toBe(400);
+    expect(weakPassword.body.error.code).toBe('VALIDATION_ERROR');
+
+    const duplicateEmail = await register('dup@example.com');
+    expect(duplicateEmail.status).toBe(409);
+    expect(duplicateEmail.body.error.code).toBe('EMAIL_ALREADY_REGISTERED');
+  });
+
+  it('rejects expired tokens and tokens for deleted accounts', async () => {
+    const registration = await register('ghost@example.com');
+    const userId = registration.body.user.id;
+
+    const expiredToken = jwt.sign(
+      { sub: userId, role: 'customer', email: 'ghost@example.com' },
+      'test-only-secret-that-is-long-enough-to-sign-jwts',
+      { expiresIn: '1ms' }
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    const expired = await request(app).get('/api/v1/auth/me').set('Authorization', `Bearer ${expiredToken}`);
+    expect(expired.status).toBe(401);
+    expect(expired.body.error.code).toBe('INVALID_TOKEN');
+
+    await User.deleteOne({ _id: userId });
+    const deleted = await request(app).get('/api/v1/auth/me').set('Authorization', `Bearer ${registration.body.token}`);
+    expect(deleted.status).toBe(401);
+    expect(deleted.body.error.code).toBe('INVALID_TOKEN');
+  });
+
+  it('rejects malformed reservation identifiers with a consistent validation error', async () => {
+    const customer = await register('malformed@example.com');
+    const response = await request(app).get('/api/v1/reservations/not-an-object-id').set('Authorization', `Bearer ${customer.body.token}`);
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('INVALID_IDENTIFIER');
   });
 });

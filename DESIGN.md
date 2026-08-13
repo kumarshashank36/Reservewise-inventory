@@ -6,7 +6,7 @@
 
 1. For every product, `onHand >= reserved >= 0`. Available inventory is derived as `onHand - reserved` and is never stored independently.
 2. A pending reservation either reserves *all* of its requested items or none of them. A request cannot leave a partial reservation.
-3. Only pending, unexpired reservations contribute to `reserved` inventory. Completed reservations are retained as an audit record and still consume inventory; cancelled and expired reservations do not.
+3. Only pending, unexpired reservations contribute to `reserved` inventory. Completing a reservation consumes its units: `onHand` and `reserved` are decremented together in the same transaction, so the sale reduces physical stock without ever breaking `onHand >= reserved`. Completed reservations are retained as audit records; cancelled and expired reservations release their holds.
 4. A customer can read, cancel, or complete only reservations where `customerId` is their own id. Admins have read access to all reservations and write access to inventory.
 5. Stock reductions by an administrator cannot make `onHand < reserved`. Such a request is rejected rather than invalidating existing reservations.
 6. Retries with the same customer-scoped idempotency key return the original reservation response and never reserve stock twice.
@@ -143,14 +143,14 @@ Admin: login → create/edit/deactivate products and adjust on-hand inventory �
 2. In a MongoDB transaction, first look up the customer/key pair. If found, return it unchanged.
 3. Read requested active products and capture snapshots. Fail if any are absent/inactive.
 4. Increment `reserved` for each product using a conditional update requiring `onHand - reserved >= quantity`. If any update does not match, abort the transaction so prior increments are rolled back.
-5. Insert the pending reservation with a ten-minute `expiresAt` and the unique idempotency key; commit.
+5. Insert the pending reservation with a ten-minute `expiresAt` (configurable via `HOLD_MINUTES`, default 10) and the unique idempotency key; commit.
 6. Retry the full transaction a small, bounded number of times on MongoDB transient transaction errors. A duplicate-key race resolves by retrieving the winning idempotent reservation.
 
 Products are updated in sorted ObjectId order to reduce write-conflict churn. MongoDB’s transaction guarantees atomic visibility; conditional updates protect availability even if competing work reaches a product first.
 
 ### State transitions and expiry
 
-Cancellation and expiry transition only an unexpired `pending` reservation. In the same transaction they decrement each item’s `reserved` and set the terminal status. Completing transitions only a pending, unexpired reservation to `completed`; it does not release stock because the units have been consumed by the completed sale. A background worker runs frequently, finds elapsed pending reservations, and calls the same transactional release operation. Each transition conditionally changes status, making races idempotent: only one actor can release the inventory.
+Cancellation and expiry transition only an unexpired `pending` reservation. In the same transaction they claim the status change conditionally and then decrement each item’s `reserved`; the claim-then-release order means only one actor can ever release the inventory, so competing actors get a clean conflict instead of a double release. Completing transitions only a pending, unexpired reservation to `completed` and decrements each item’s `onHand` and `reserved` together — the sale consumes physical stock while preserving `onHand >= reserved`. The completion claim also re-checks `expiresAt > now` inside its update, so a completion cannot land after its hold window ended. A background worker runs frequently, finds elapsed pending reservations, and calls the same transactional release operation.
 
 ### Inventory adjustments
 

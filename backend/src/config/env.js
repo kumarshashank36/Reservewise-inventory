@@ -10,6 +10,7 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must be at least 32 characters').optional(),
   JWT_EXPIRES_IN: z.string().default('8h'),
   CLIENT_ORIGIN: z.string().url().default('http://localhost:5173'),
+  HOLD_MINUTES: z.coerce.number().int().min(1).max(1440).default(10),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info')
 });
 

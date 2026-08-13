@@ -78,7 +78,7 @@ describe('reservation API', () => {
     expect((await Product.findById(product._id)).reserved).toBe(0);
   });
 
-  it('keeps completed inventory consumed and isolates a customer reservation from other customers', async () => {
+  it('consumes completed inventory and isolates a customer reservation from other customers', async () => {
     const product = await createProduct({ sku: 'TABLE-01', name: 'Table', onHand: 3 });
     const owner = await register('owner@example.com');
     const stranger = await register('stranger@example.com');
@@ -88,7 +88,127 @@ describe('reservation API', () => {
     const completion = await request(app).post(`/api/v1/reservations/${created.body.reservation._id}/complete`).set('Authorization', `Bearer ${owner}`);
     expect(completion.status).toBe(200);
     expect(completion.body.reservation.status).toBe('completed');
-    expect((await Product.findById(product._id)).reserved).toBe(1);
+
+    // Completion consumes the units: onHand and reserved move together, availability is unchanged.
+    const stored = await Product.findById(product._id);
+    expect(stored.onHand).toBe(2);
+    expect(stored.reserved).toBe(0);
+    expect(stored.available).toBe(2);
+  });
+
+  it('merges duplicate product lines into a single line', async () => {
+    const product = await createProduct({ sku: 'MERGE-01', name: 'Merged Item', onHand: 3 });
+    const customer = await register('merge@example.com');
+
+    const response = await reserve(
+      customer,
+      [{ productId: product._id, quantity: 2 }, { productId: product._id, quantity: 1 }],
+      'merge-lines-key-001'
+    );
+
+    expect(response.status).toBe(201);
+    expect(response.body.reservation.items).toHaveLength(1);
+    expect(response.body.reservation.items[0].quantity).toBe(3);
+    expect((await Product.findById(product._id)).reserved).toBe(3);
+  });
+
+  it('rejects a merged request that exceeds availability and leaves no partial hold', async () => {
+    const product = await createProduct({ sku: 'MERGE-02', name: 'Merged Item', onHand: 2 });
+    const customer = await register('merge-short@example.com');
+
+    const response = await reserve(
+      customer,
+      [{ productId: product._id, quantity: 2 }, { productId: product._id, quantity: 1 }],
+      'merge-lines-key-002'
+    );
+
+    expect(response.status).toBe(409);
+    expect(response.body.error.code).toBe('INSUFFICIENT_INVENTORY');
+    expect((await Product.findById(product._id)).reserved).toBe(0);
+    expect(await Reservation.countDocuments()).toBe(0);
+  });
+
+  it('replays concurrent duplicate idempotency keys without reserving twice', async () => {
+    const product = await createProduct({ sku: 'DUPKEY-01', name: 'Duplicate Key Item', onHand: 5 });
+    const customer = await register('dupkey@example.com');
+    const body = [{ productId: product._id, quantity: 2 }];
+
+    const [first, second] = await Promise.all([
+      reserve(customer, body, 'duplicate-race-key-001'),
+      reserve(customer, body, 'duplicate-race-key-001')
+    ]);
+
+    expect([first.status, second.status].sort()).toEqual([200, 201]);
+    expect(first.body.reservation._id).toBe(second.body.reservation._id);
+    expect((await Product.findById(product._id)).reserved).toBe(2);
+    expect(await Reservation.countDocuments()).toBe(1);
+  });
+
+  it('requires an idempotency key on reservation creation', async () => {
+    const product = await createProduct({ sku: 'NOKEY-01', name: 'No Key Item', onHand: 2 });
+    const customer = await register('no-key@example.com');
+
+    const response = await request(app).post('/api/v1/reservations')
+      .set('Authorization', `Bearer ${customer}`)
+      .send({ items: [{ productId: product._id, quantity: 1 }] });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('never over-reserves when two different customers contend for the final unit', async () => {
+    const product = await createProduct({ sku: 'LAST-ONE-01', name: 'Final Unit', onHand: 1 });
+    const firstCustomer = await register('contender-1@example.com');
+    const secondCustomer = await register('contender-2@example.com');
+
+    const attempts = await Promise.all([
+      reserve(firstCustomer, [{ productId: product._id, quantity: 1 }], 'contender-key-001'),
+      reserve(secondCustomer, [{ productId: product._id, quantity: 1 }], 'contender-key-002')
+    ]);
+
+    expect(attempts.filter((response) => response.status === 201)).toHaveLength(1);
+    const stored = await Product.findById(product._id);
+    expect(stored.reserved).toBe(1);
+    expect(stored.reserved).toBeLessThanOrEqual(stored.onHand);
+  });
+
+  it('releases inventory exactly once when cancellation races the expiry worker', async () => {
+    const product = await createProduct({ sku: 'RACE-CANCEL-01', name: 'Racing Item', onHand: 4 });
+    const customer = await register('race-cancel@example.com');
+    const created = await reserve(customer, [{ productId: product._id, quantity: 2 }], 'race-cancel-key-001');
+    await Reservation.updateOne({ _id: created.body.reservation._id }, { expiresAt: new Date(Date.now() - 1) });
+
+    const [cancellation] = await Promise.all([
+      request(app).post(`/api/v1/reservations/${created.body.reservation._id}/cancel`).set('Authorization', `Bearer ${customer}`),
+      expireDueReservations()
+    ]);
+
+    // Both actors are eligible; whichever loses the claim gets a clean conflict, never a double release.
+    expect(cancellation.status).toBe(409);
+    const stored = await Reservation.findById(created.body.reservation._id);
+    expect(stored.status).toBe('expired');
+    expect((await Product.findById(product._id)).reserved).toBe(0);
+    expect((await Product.findById(product._id)).onHand).toBe(4);
+  });
+
+  it('never completes or double-releases when completion races the expiry worker', async () => {
+    const product = await createProduct({ sku: 'RACE-COMPLETE-01', name: 'Racing Item', onHand: 4 });
+    const customer = await register('race-complete@example.com');
+    const created = await reserve(customer, [{ productId: product._id, quantity: 2 }], 'race-complete-key-001');
+    await Reservation.updateOne({ _id: created.body.reservation._id }, { expiresAt: new Date(Date.now() - 1) });
+
+    const [completion] = await Promise.all([
+      request(app).post(`/api/v1/reservations/${created.body.reservation._id}/complete`).set('Authorization', `Bearer ${customer}`),
+      expireDueReservations()
+    ]);
+
+    // The expired hold wins: the completion must neither consume stock nor release it twice.
+    expect(completion.status).toBe(409);
+    const stored = await Reservation.findById(created.body.reservation._id);
+    expect(stored.status).toBe('expired');
+    const productAfter = await Product.findById(product._id);
+    expect(productAfter.reserved).toBe(0);
+    expect(productAfter.onHand).toBe(4);
   });
 
   it('expires reservations transactionally and makes their inventory available again', async () => {

@@ -50,6 +50,8 @@ Prerequisites: Node.js 20+, npm, and Docker Desktop.
 
 Open `http://localhost:5173`. Customers can register themselves. The seeded admin signs in as `admin@example.com` with the `SEED_ADMIN_PASSWORD` used above.
 
+The reservation hold window defaults to 10 minutes; set `HOLD_MINUTES=1` in `backend/.env` (or prefix a dev command with it) to shorten holds while demoing expiry.
+
 ## Test and build
 
 ```sh
@@ -57,11 +59,23 @@ npm test
 npm run build --workspace frontend
 ```
 
-The backend integration suite starts a disposable MongoDB replica set and covers authentication, role gates, stock adjustment constraints, atomic reservations, idempotency, cancellation, expiry, customer isolation, completion, and concurrent requests.
+The backend suite (26 tests) starts a disposable MongoDB replica set and covers authentication, role gates, stock adjustment constraints, atomic reservations, idempotency (including a concurrent duplicate-key race), duplicate-line merging, cancellation, expiry, customer isolation, completion, contention (single- and multi-customer), transition-vs-expiry-worker races, and transaction retry behaviour. The frontend suite (19 tests) covers the auth flow, session restore, catalog/cart/reservation flows, admin inventory editing, and loading/error states.
+
+## Manual UI verification
+
+One command boots the full stack and prints a step-by-step checklist that walks through every feature in the browser, including a two-browser concurrency scenario and a fast path for expiry:
+
+```sh
+npm run verify:ui          # 10-minute holds
+HOLD_MINUTES=1 npm run verify:ui   # 1-minute holds, for verifying expiry quickly
+```
+
+Detailed steps and expected outcomes live in [MANUAL_VERIFICATION.md](./MANUAL_VERIFICATION.md).
 
 ## Key decisions and trade-offs
 
 - `Product.onHand` and `Product.reserved` are the only stock counters; availability is always calculated as `onHand - reserved`.
+- Completing a reservation consumes its units: `onHand` and `reserved` are decremented together in the same transaction, so a completed sale reduces physical stock without ever breaking `onHand >= reserved`.
 - Reservations store immutable product snapshots (SKU, name, price, quantity). Later product edits do not rewrite history.
 - MongoDB transactions require a replica set. This is why local Compose is not a plain standalone `mongod`.
 - There is no reservation TTL index: deleting expired documents would lose audit data and would not atomically return stock.
@@ -83,7 +97,7 @@ All product availability checks, `reserved` increments, and reservation insertio
 
 ### 4. How are expiry and cancellation handled?
 
-Pending reservations have a ten-minute `expiresAt`. A background worker periodically finds due records and performs the same transactional state transition used by cancellation: decrement every item’s `reserved` counter and mark the record terminal. Conditional pending-state transitions ensure two competing actors cannot release the same units twice.
+Pending reservations have a ten-minute `expiresAt` (configurable via `HOLD_MINUTES`). A background worker periodically finds due records and performs the same transactional state transition used by cancellation: claim the state change conditionally, then decrement every item’s `reserved` counter and mark the record terminal. The claim-then-release order guarantees two competing actors cannot release the same units twice. Completion uses the same claim pattern, re-checks `expiresAt` inside the update so a hold cannot complete after its window ended, and consumes the units by decrementing `onHand` and `reserved` together.
 
 ### 5. Failure scenarios considered and recovery
 
