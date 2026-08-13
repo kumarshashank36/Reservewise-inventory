@@ -108,6 +108,20 @@ Indexes: `{ sku: 1 }` unique, `{ isActive: 1, name: 1 }`.
 
 Indexes: `{ customerId: 1, idempotencyKey: 1 }` unique (only when key exists), `{ customerId: 1, createdAt: -1 }`, `{ status: 1, expiresAt: 1 }`, and `{ 'items.productId': 1 }` for admin history. There is no TTL index: automatically deleting an expired reservation would lose its audit trail and, crucially, would not release inventory.
 
+### `wishlistItems`
+
+```js
+{
+  _id: ObjectId,
+  customerId: ObjectId,       // ref users
+  productId: ObjectId,        // ref products
+  createdAt: Date,
+  updatedAt: Date
+}
+```
+
+Indexes: `{ customerId: 1, productId: 1 }` unique — one entry per product per customer, and the index resolves concurrent double-add races. Wishlist entries are pure bookmarks: they never touch `onHand` or `reserved`. Availability shown to the customer is computed from the live product counters at read time.
+
 ## API structure
 
 All endpoints are prefixed with `/api/v1`. Errors use `{ error: { code, message, details? } }`.
@@ -119,6 +133,9 @@ All endpoints are prefixed with `/api/v1`. Errors use `{ error: { code, message,
 | Auth | `POST /auth/login` | public | return JWT and user; body carries the selected sign-in type and valid credentials whose account role does not match it are rejected with `ROLE_MISMATCH` |
 | Auth | `GET /auth/me` | authenticated | restore user identity |
 | Products | `GET /products` | authenticated | active product catalog with availability |
+| Wishlist | `GET /wishlist` | customer | own saved products with live availability |
+| Wishlist | `POST /wishlist` | customer | add a product (idempotent) |
+| Wishlist | `DELETE /wishlist/:productId` | customer | remove a product (idempotent) |
 | Reservations | `POST /reservations` | customer | atomically reserve products; requires `Idempotency-Key` |
 | Reservations | `GET /reservations` | customer | own reservation history |
 | Reservations | `GET /reservations/:id` | customer owner | one reservation |
@@ -135,7 +152,7 @@ All endpoints are prefixed with `/api/v1`. Errors use `{ error: { code, message,
 
 ## Customer and admin flows
 
-Customer: register/login → browse active catalog and available quantities → choose products and quantities → send reservation with a generated idempotency key → view pending countdown/history → complete or cancel the reservation. A retry reuses the same key until a response is obtained.
+Customer: register/login → browse active catalog and available quantities → choose products and quantities → send reservation with a generated idempotency key → view pending countdown/history → complete or cancel the reservation. A retry reuses the same key until a response is obtained. The catalog draft (selections plus the pending idempotency key) persists per customer in browser storage, so navigation and refreshes keep the draft; restoring it clamps quantities to live availability, and editing the draft invalidates the old key so a changed request can never replay an earlier one. Products can be hearted into a personal wishlist from the catalog and reserved directly from the wishlist page through the same reservation endpoint; wishlist membership never affects inventory, and a sold-out wishlisted product stays saved while reservations for it fail with the normal availability conflict.
 
 Admin: login → create/edit/deactivate products and adjust on-hand inventory → see all reservations, status, item snapshots, and timestamps → provision customer or administrator accounts from the Team page, soft-delete customer accounts, and reactivate them later (open self-registration stays customer-only, so no one can self-promote to admin). A soft-deleted customer keeps their reservation history, can no longer sign in, and their issued tokens stop working immediately; any pending holds they had release through the normal expiry worker. Reactivation restores sign-in and unexpired pre-deactivation tokens. The UI displays a clear validation error if a stock reduction would conflict with reservations.
 

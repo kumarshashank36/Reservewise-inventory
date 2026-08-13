@@ -11,6 +11,7 @@ import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import reservationRoutes from './routes/reservationRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import wishlistRoutes from './routes/wishlistRoutes.js';
 
 export function createApp() {
   const app = express();
@@ -26,6 +27,7 @@ export function createApp() {
   app.use('/api/v1', productRoutes);
   app.use('/api/v1', reservationRoutes);
   app.use('/api/v1', userRoutes);
+  app.use('/api/v1', wishlistRoutes);
   app.use(notFound);
   app.use(errorHandler);
 

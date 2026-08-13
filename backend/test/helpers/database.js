@@ -3,6 +3,7 @@ import { connectDatabase, disconnectDatabase } from '../../src/config/database.j
 import { Product } from '../../src/models/Product.js';
 import { Reservation } from '../../src/models/Reservation.js';
 import { User } from '../../src/models/User.js';
+import { WishlistItem } from '../../src/models/WishlistItem.js';
 
 let replSet;
 
@@ -12,7 +13,7 @@ export async function startTestDatabase() {
 }
 
 export async function clearTestDatabase() {
-  await Promise.all([User.deleteMany({}), Product.deleteMany({}), Reservation.deleteMany({})]);
+  await Promise.all([User.deleteMany({}), Product.deleteMany({}), Reservation.deleteMany({}), WishlistItem.deleteMany({})]);
 }
 
 export async function stopTestDatabase() {

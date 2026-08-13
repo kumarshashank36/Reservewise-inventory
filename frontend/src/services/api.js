@@ -35,5 +35,8 @@ export const api = {
   adminUsers: (token) => request('/admin/users', { token }),
   createUser: (token, body) => request('/admin/users', { token, method: 'POST', body: JSON.stringify(body) }),
   deactivateUser: (token, id) => request(`/admin/users/${id}`, { token, method: 'DELETE' }),
-  reactivateUser: (token, id) => request(`/admin/users/${id}/activate`, { token, method: 'POST' })
+  reactivateUser: (token, id) => request(`/admin/users/${id}/activate`, { token, method: 'POST' }),
+  wishlist: (token) => request('/wishlist', { token }),
+  addWishlistItem: (token, productId) => request('/wishlist', { token, method: 'POST', body: JSON.stringify({ productId }) }),
+  removeWishlistItem: (token, productId) => request(`/wishlist/${productId}`, { token, method: 'DELETE' })
 };

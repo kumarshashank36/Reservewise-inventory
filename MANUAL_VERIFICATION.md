@@ -55,7 +55,12 @@ HOLD_MINUTES=1 npm run verify:ui
 1. Add 2 × Desk Lamp and 1 × Chair → the cart panel shows "3 units selected" with line totals.
 2. Click **Reserve inventory**.
 3. **Expected:** a success notice with the hold length, the cart empties, and the catalog now shows 2 fewer lamps and 1 fewer chair available.
-   *Rule: multi-product reservation; available = onHand − reserved.*
+4. Add a quantity, then navigate to Wishlist and back to Catalog.
+5. **Expected:** the draft (selections) is still there — it persists per customer across navigation and refreshes.
+6. With a draft selected, stop the backend (`kill` its process or Ctrl+C the dev run) and click Reserve → the failure notice appears.
+7. Restart the backend, navigate away and back to Catalog, click Reserve again.
+8. **Expected:** the retry succeeds — the draft kept its idempotency key, so the same hold is replayed rather than a duplicate reservation being created.
+   *Rule: multi-product reservation; available = onHand − reserved; retries with the same key are safe.*
 
 ### 6. Countdown
 
@@ -151,6 +156,19 @@ HOLD_MINUTES=1 npm run verify:ui
 7. Back in **Team**, click **Reactivate** on the deactivated row.
 8. **Expected:** the badge flips back to **customer**, sign-in works again, and even the session that was open before deactivation becomes valid again on refresh.
    *Rule: only customers can be soft-deleted; their data is retained, their sessions die immediately while deactivated, and reactivation restores access.*
+
+### 20. Wishlist
+
+1. As a customer, open the **Catalog** and click the **♡** heart on a product card.
+2. **Expected:** the heart fills to ♥ immediately; open **Wishlist** in the sidebar — the product is listed with live availability and a "Saved products are not reserved" note.
+3. **Expected:** catalog availability is unchanged by hearting (wishlist never holds stock); the admin inventory view also shows no change.
+4. In the Wishlist, use the stepper to pick a quantity and click **Reserve**.
+5. **Expected:** a hold success notice appears, availability drops in the wishlist, and the item shows under My reservations with its countdown. The wishlist entry remains.
+6. Add a product with on-hand = 1 (as admin), heart it as customer A, and have customer B (incognito) reserve the last unit.
+7. **Expected:** customer A's wishlist now shows **Unavailable**; reserving it from the wishlist fails with the insufficient-inventory message while the item stays saved.
+8. Click **Remove** on a wishlist item.
+9. **Expected:** the item disappears and inventory is untouched.
+   *Rule: wishlists are per-customer bookmarks; only a successful reservation changes inventory.*
 
 ## What is NOT manually verifiable via the UI (by design)
 

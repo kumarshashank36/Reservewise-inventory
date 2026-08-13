@@ -75,6 +75,7 @@ Detailed steps and expected outcomes live in [MANUAL_VERIFICATION.md](./MANUAL_V
 ## Key decisions and trade-offs
 
 - `Product.onHand` and `Product.reserved` are the only stock counters; availability is always calculated as `onHand - reserved`.
+- Wishlists are per-customer bookmarks and never touch inventory counters — only the reservation transaction moves stock. Wishlist reads show live availability and reservations from the wishlist reuse the same endpoint and rules.
 - Completing a reservation consumes its units: `onHand` and `reserved` are decremented together in the same transaction, so a completed sale reduces physical stock without ever breaking `onHand >= reserved`.
 - Reservations store immutable product snapshots (SKU, name, price, quantity). Later product edits do not rewrite history.
 - MongoDB transactions require a replica set. This is why local Compose is not a plain standalone `mongod`.

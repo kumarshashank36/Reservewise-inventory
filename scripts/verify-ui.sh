@@ -119,6 +119,8 @@ Admin sign-in: admin@example.com (select the Admin sign-in type) / password from
                  toggle lands in the right workspace.
  4. CATALOG      Three seeded products appear with availability; steppers stop at 0 and at available.
  5. RESERVE      Pick quantities → Reserve inventory → success notice with the hold length; availability drops.
+                 The draft survives navigation and refreshes; a failed reserve keeps the same hold key for
+                 a safe retry.
  6. COUNTDOWN    My reservations shows a ticking "Expires in m:ss" per pending reservation.
  7. RELEASE      Release a reservation → status Cancelled; catalog availability returns.
  8. COMPLETE     Reserve again → Complete → status Completed; the admin inventory view shows on-hand reduced.
@@ -138,6 +140,8 @@ Admin sign-in: admin@example.com (select the Admin sign-in type) / password from
 19. DEACTIVATE   Register a customer, then from Team deactivate them: badge flips to deactivated, their open
                  session dies on refresh, and sign-in shows the account-deactivated message. Admin rows have
                  no Deactivate button. Reactivate restores sign-in and the badge flips back.
+20. WISHLIST     Heart a product in the catalog (never affects stock), open Wishlist, reserve from there
+                 through the normal flow, watch a sold-out item stay saved but fail to reserve, then remove it.
 
 Fast path for the 10-minute expiry (scenario 9):
   Stop this script (Ctrl+C), then run:  HOLD_MINUTES=1 npm run verify:ui

@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext } from '../context/AuthContext.jsx';
+import { WishlistProvider } from '../context/WishlistContext.jsx';
 import { ApiError, api } from '../services/api.js';
 import { CustomerCatalog, CustomerReservations } from './CustomerPages.jsx';
 
@@ -10,7 +11,7 @@ vi.mock('../services/api.js', () => {
   }
   return {
     ApiError: MockApiError,
-    api: { register: vi.fn(), login: vi.fn(), me: vi.fn(), products: vi.fn(), reservations: vi.fn(), createReservation: vi.fn(), cancelReservation: vi.fn(), completeReservation: vi.fn(), adminProducts: vi.fn(), createProduct: vi.fn(), updateProduct: vi.fn(), adminReservations: vi.fn() }
+    api: { register: vi.fn(), login: vi.fn(), me: vi.fn(), products: vi.fn(), reservations: vi.fn(), createReservation: vi.fn(), cancelReservation: vi.fn(), completeReservation: vi.fn(), adminProducts: vi.fn(), createProduct: vi.fn(), updateProduct: vi.fn(), adminReservations: vi.fn(), adminUsers: vi.fn(), createUser: vi.fn(), deactivateUser: vi.fn(), reactivateUser: vi.fn(), wishlist: vi.fn(), addWishlistItem: vi.fn(), removeWishlistItem: vi.fn() }
   };
 });
 
@@ -20,7 +21,7 @@ const customerAuth = {
 };
 
 function renderWithAuth(children) {
-  return render(<AuthContext.Provider value={customerAuth}>{children}</AuthContext.Provider>);
+  return render(<AuthContext.Provider value={customerAuth}><WishlistProvider>{children}</WishlistProvider></AuthContext.Provider>);
 }
 
 const product = (overrides = {}) => ({ _id: 'p1', sku: 'LAMP-01', name: 'Desk Lamp', description: 'Bright', priceCents: 5900, onHand: 3, reserved: 0, available: 3, isActive: true, ...overrides });
@@ -33,7 +34,7 @@ const reservation = (overrides = {}) => ({
   ...overrides
 });
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); api.wishlist.mockResolvedValue({ payload: { items: [] } }); });
 afterEach(cleanup);
 
 describe('CustomerCatalog', () => {
@@ -86,6 +87,80 @@ describe('CustomerCatalog', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Reserve inventory' }));
     await waitFor(() => expect(api.createReservation).toHaveBeenCalledTimes(2));
     expect(api.createReservation.mock.calls[0][2]).toBe(api.createReservation.mock.calls[1][2]);
+  });
+
+  it('toggles wishlist membership from the product card', async () => {
+    api.products.mockResolvedValue({ payload: { products: [product()] } });
+    api.addWishlistItem.mockResolvedValue({ payload: { item: { productId: 'p1' } } });
+    renderWithAuth(<CustomerCatalog />);
+    await screen.findByText('Desk Lamp');
+
+    const addButton = screen.getByRole('button', { name: 'Add Desk Lamp to wishlist' });
+    expect(addButton).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(addButton);
+
+    await waitFor(() => expect(api.addWishlistItem).toHaveBeenCalledWith('customer-token', 'p1'));
+    const removeButton = screen.getByRole('button', { name: 'Remove Desk Lamp from wishlist' });
+    expect(removeButton).toHaveAttribute('aria-pressed', 'true');
+
+    api.removeWishlistItem.mockResolvedValue({ payload: { removed: true } });
+    fireEvent.click(removeButton);
+    await waitFor(() => expect(api.removeWishlistItem).toHaveBeenCalledWith('customer-token', 'p1'));
+    expect(screen.getByRole('button', { name: 'Add Desk Lamp to wishlist' })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('restores a persisted draft after remount and clamps it to live availability', async () => {
+    localStorage.setItem('reservewise.draft.u1', JSON.stringify({ items: { p1: 5 }, key: 'stored-key-1234' }));
+    api.products.mockResolvedValue({ payload: { products: [product({ available: 3, onHand: 3 })] } });
+    renderWithAuth(<CustomerCatalog />);
+
+    await screen.findByRole('heading', { name: 'Desk Lamp' });
+    // The stored quantity of 5 is clamped to the 3 currently available.
+    expect(screen.getByText('3 units selected')).toBeInTheDocument();
+  });
+
+  it('persists the draft and clears it after a successful reservation', async () => {
+    api.products.mockResolvedValue({ payload: { products: [product()] } });
+    api.createReservation.mockResolvedValue({ payload: { reservation: reservation({ createdAt: new Date(Date.now() - 10 * 60_000).toISOString(), expiresAt: new Date().toISOString() }) } });
+    renderWithAuth(<CustomerCatalog />);
+    await screen.findByText('Desk Lamp');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add one Desk Lamp' }));
+    await waitFor(() => expect(JSON.parse(localStorage.getItem('reservewise.draft.u1')).items.p1).toBe(1));
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve inventory' }));
+    await screen.findByText(/held for 10 minutes/);
+    await waitFor(() => {
+      const stored = JSON.parse(localStorage.getItem('reservewise.draft.u1'));
+      expect(stored.items).toEqual({});
+      expect(stored.key).toBeNull();
+    });
+  });
+
+  it('keeps the draft and its idempotency key when a reservation fails, and reuses the key after remount', async () => {
+    api.products.mockResolvedValue({ payload: { products: [product()] } });
+    api.createReservation.mockRejectedValue(new ApiError('Service unavailable', { status: 503 }));
+    const first = renderWithAuth(<CustomerCatalog />);
+    await screen.findByText('Desk Lamp');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add one Desk Lamp' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve inventory' }));
+    await screen.findByText('Service unavailable');
+
+    const stored = JSON.parse(localStorage.getItem('reservewise.draft.u1'));
+    expect(stored.items.p1).toBe(1);
+    expect(stored.key).toMatch(/^[0-9a-f-]{36}$/);
+    const failedKey = stored.key;
+
+    // Simulate navigating away and back: the draft and key survive the remount.
+    first.unmount();
+    api.createReservation.mockResolvedValue({ payload: { reservation: reservation({ createdAt: new Date(Date.now() - 10 * 60_000).toISOString(), expiresAt: new Date().toISOString() }) } });
+    renderWithAuth(<CustomerCatalog />);
+    await screen.findByRole('heading', { name: 'Desk Lamp' });
+    expect(screen.getByText('1 unit selected')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve inventory' }));
+    await waitFor(() => expect(api.createReservation.mock.calls[1][2]).toBe(failedKey));
   });
 });
 

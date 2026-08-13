@@ -9,8 +9,8 @@ Lead-engineer review of the current codebase against [Technical Challenge.md](./
 
 The system is **substantially complete and working end to end**. Verified today:
 
-- **Backend** (`backend/src/`): Express 5 API with JWT auth (customer/admin), full reservation lifecycle, MongoDB transactions, idempotency, expiry worker, validation (zod), and consistent error responses. **37/37 tests pass** against a disposable replica set (`mongodb-memory-server`).
-- **Frontend** (`frontend/src/`): React 19 + Vite SPA with landing, login/register (with Customer/Admin sign-in toggle), customer catalog + cart + reservation history, and admin inventory + reservations + team views. Protected routing, session restore, live countdowns, inline admin stock editing, loading/error/empty states, responsive CSS. **25/25 tests pass; production build succeeds.**
+- **Backend** (`backend/src/`): Express 5 API with JWT auth (customer/admin), full reservation lifecycle, MongoDB transactions, idempotency, expiry worker, customer wishlists, validation (zod), and consistent error responses. **45/45 tests pass** against a disposable replica set (`mongodb-memory-server`).
+- **Frontend** (`frontend/src/`): React 19 + Vite SPA with landing, login/register (with Customer/Admin sign-in toggle), customer catalog + wishlist + cart + reservation history, and admin inventory + reservations + team views. Protected routing, session restore, live countdowns, inline admin stock editing, loading/error/empty states, responsive CSS. The customer area shares one layout + wishlist state across its pages, so membership changes reflect instantly on navigation, with re-sync and focus-refetch recovery. The catalog reservation draft persists per customer in browser storage — including its pending idempotency key — and is clamped to live availability on restore. **35/35 tests pass; production build succeeds.**
 - **Database**: MongoDB 8 single-node replica set via `docker-compose.yml` (transactions require a replica set). Models with unique indexes and query indexes per DESIGN.md. Seed script creates an admin + 3 products.
 - **Manual verification**: `npm run verify:ui` boots the stack, opens the browser, and prints a 17-scenario UI checklist (full details in `MANUAL_VERIFICATION.md`). `HOLD_MINUTES` env allows 1-minute holds for quick expiry verification.
 - **Docs**: `README.md` answers all 8 assessment questions; `DESIGN.md` documents invariants, schemas, API contract, and testing strategy.
@@ -47,7 +47,7 @@ The system is **substantially complete and working end to end**. Verified today:
 | Models/schema | ✅ | `User`, `Product`, `Reservation` with schema-level constraints and all DESIGN.md indexes |
 | Authentication | ✅ | bcrypt (cost 12), JWT (`sub`/`role`/`email`, 8h). Login requires a Customer/Admin sign-in type: credentials are checked first (generic 401 — no account-existence leak), then a role mismatch is rejected with `403 ROLE_MISMATCH`. `authenticate.js` re-reads the user, so deleted accounts and role changes are enforced. |
 | Authorization/roles | ✅ | `authorize('admin' | 'customer')` middleware; customers on `/reservations`, admins on `/admin/*` |
-| APIs | ✅ | Every DESIGN.md endpoint exists: health, register, login, me, products, reservations (create/list/get/cancel/complete), admin products (list/create/patch), admin reservations |
+| APIs | ✅ | Every DESIGN.md endpoint exists: health, register, login, me, products, wishlist (list/add/remove, customer-only), reservations (create/list/get/cancel/complete), admin products (list/create/patch), admin reservations, admin users (list/create/delete/activate) |
 | Business logic | ✅ | Reservation creation, state transitions, release all live in `reservationService.js` |
 | Validation | ✅ | zod schemas per controller; SKU format, quantity bounds (1–10,000, ≤25 lines), password ≥10; duplicate product lines merged |
 | Error handling | ✅ | `AppError`, ZodError → 400 w/ details, CastError → 400, 11000 → 409, 404 fallback, request-id on every error; pino logging |
@@ -106,10 +106,13 @@ Implemented (all code in `backend/src/models/`):
 - `backend/test/auth-products.integration.test.js` — register/login/me, role gates (403, both directions), active-only catalog, safe stock-adjust 409, healthy DB health check, invalid credentials/weak passwords/duplicate emails, **role-matched sign-ins (customer + admin), role-mismatch rejections (both directions), no account/role leakage for invalid credentials, missing/invalid sign-in role → 400**, **admin team provisioning (role gates, provisioned admin signs in via the Admin toggle, no password-hash leaks, duplicate/weak-password/invalid-role validation)**, expired JWTs, deleted-account tokens, malformed ObjectIds (14 tests).
 - `backend/test/reservations.integration.test.js` — atomic multi-product create + idempotent replay, full rollback on partial failure, cancel releases exactly once (double-cancel idempotent), **completion consumes stock** (onHand and reserved move together), customer isolation (404), expiry worker release, 8-way contention, **duplicate-line merging (+ rejected merge rollback)**, **concurrent duplicate-key race**, **missing idempotency key → 400**, **multi-customer final-unit contention**, **cancel-vs-expiry-worker race**, **complete-vs-expiry-worker race** (13 tests).
 - `backend/test/transaction.test.js` — `runTransaction` retries on `TransientTransactionError` and `UnknownTransactionCommitResult`, does not retry non-transient errors, gives up after 3 attempts (4 tests).
+- `backend/test/wishlist.integration.test.js` — add/list with live availability, concurrent duplicate-adds (unique index race), persistence across sessions, customer isolation (incl. foreign removal), zero inventory impact of add/remove, reserve-from-wishlist via the normal flow, graceful failure at zero availability, idempotent removal, admin role gate, identifier validation (8 tests).
 - `frontend/src/App.test.jsx` — landing-page smoke test (1 test).
 - `frontend/src/pages/AuthPages.test.jsx` — login with default Customer toggle (role param), Admin toggle switch, role-mismatch error display, wrong-credentials error, register success/validation error (6 tests).
 - `frontend/src/pages/CustomerPages.test.jsx` — catalog load/error-retry, stepper + reserve with stable idempotency key, retry reuses the same key, countdown rendering, Release/Complete calls, overdue row hides actions, transition errors (7 tests).
 - `frontend/src/pages/AdminPages.test.jsx` — inventory list, inline stock edit, reserved-floor client check, server 409 surfacing, add product, deactivate, audit view, team list + admin provisioning (role select), provisioning errors (7 tests).
+- `frontend/src/pages/WishlistPage.test.jsx` — saved items with live availability, reserve through the normal flow with a stable idempotency key, unavailable items disable reserving, graceful server availability errors, removal without touching reservations, empty state (5 tests).
+- `frontend/src/pages/CustomerPages.test.jsx` — includes catalog wishlist-heart toggling (8 tests).
 - `frontend/src/context/AuthContext.test.jsx` — session restore via `/auth/me`, invalid-token cleanup (2 tests).
 
 **Remaining test gaps (nice-to-have):**
@@ -182,7 +185,7 @@ No requirement is missing, and no implemented feature is fake — every claim in
 
 - [x] Application source code committed (`frontend/`, `backend/`)
 - [x] Database schema in code (`backend/src/models/`) + seed script (`backend/src/scripts/seed.js`)
-- [x] Automated tests — 37 backend + 25 frontend, all passing
+- [x] Automated tests — 45 backend + 35 frontend, all passing
 - [x] Manual UI verification — `npm run verify:ui` + `MANUAL_VERIFICATION.md` (17 scenarios)
 - [x] README with local run instructions, architecture overview, trade-offs, and all 8 assessment answers
 - [x] DESIGN.md with invariants, edge cases, and API contract
