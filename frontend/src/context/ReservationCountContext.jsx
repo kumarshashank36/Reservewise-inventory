@@ -18,14 +18,20 @@ export function ReservationCountProvider({ children }) {
     try {
       const { payload } = await api.reservations(session.token, { page: 1, limit: 1, status: 'pending' });
       setPending(payload.pagination?.total ?? 0);
-    } catch { /* best-effort badge; real errors surface on the reservations page */ }
+    } catch {
+      /* best-effort badge; real errors surface on the reservations page */
+    }
   }, [session.token]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   useEffect(() => {
     const timer = setInterval(refresh, 30000);
-    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') refresh();
+    };
     window.addEventListener('focus', onVisible);
     document.addEventListener('visibilitychange', onVisible);
     return () => {

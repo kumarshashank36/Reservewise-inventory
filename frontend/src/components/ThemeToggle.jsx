@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { Moon, Sun } from 'lucide-react';
 import { applyTheme, getTheme } from '../theme.js';
+import { Button } from './ui/button.jsx';
 
 // Self-contained light/dark switch: reads the current theme off the document
 // element, applies it there (so the whole CSS variable set flips), and persists
@@ -11,5 +13,10 @@ export function ThemeToggle() {
     applyTheme(next);
     setTheme(next);
   };
-  return <button type="button" className="theme-toggle" data-tooltip={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggle}>{theme === 'dark' ? '☀' : '☾'}</button>;
+  const label = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+  return (
+    <Button size="icon" variant="ghost" aria-label={label} data-tooltip={label} title={label} onClick={toggle}>
+      {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+    </Button>
+  );
 }

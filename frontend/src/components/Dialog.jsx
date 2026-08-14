@@ -1,27 +1,32 @@
-import { useEffect } from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
+import { X } from 'lucide-react';
+import { cn } from '../lib/utils.js';
 
-// Centered modal shell: dimmed backdrop, Escape or backdrop click closes,
-// body scroll locks while open. Pass `wide` for form-sized dialogs.
+// Radix supplies the keyboard, focus, and screen-reader behavior; this wrapper
+// keeps the API used by the inventory forms compact.
 export function Dialog({ open, title, wide = false, onClose, children }) {
-  useEffect(() => {
-    if (!open) return undefined;
-    const onKeyDown = (event) => { if (event.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    const previousFocus = document.activeElement;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      if (previousFocus instanceof HTMLElement) previousFocus.focus(); // restore focus for keyboard users
-    };
-  }, [open, onClose]);
-
-  if (!open) return null;
-  return <div className="dialog-overlay" onClick={onClose}>
-    <div className={`dialog-panel${wide ? ' dialog-wide' : ''}`} role="dialog" aria-modal="true" aria-label={title} onClick={(event) => event.stopPropagation()}>
-      <div className="dialog-head"><h2>{title}</h2><button className="dialog-close" aria-label="Close dialog" onClick={onClose}>×</button></div>
-      {children}
-    </div>
-  </div>;
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[#14152b]/30 backdrop-blur-sm" />
+        <DialogPrimitive.Content
+          className={cn(
+            'fixed top-1/2 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-black/10 bg-[#eef0ff] p-6 shadow-2xl outline-none',
+            wide && 'max-w-2xl',
+          )}
+        >
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <DialogPrimitive.Title className="text-xl font-medium tracking-[-.04em]">{title}</DialogPrimitive.Title>
+            <DialogPrimitive.Close
+              className="rounded-full p-2 text-[#66677a] transition-colors hover:bg-black/5 hover:text-[#14152b]"
+              aria-label="Close dialog"
+            >
+              <X size={18} />
+            </DialogPrimitive.Close>
+          </div>
+          {children}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  );
 }

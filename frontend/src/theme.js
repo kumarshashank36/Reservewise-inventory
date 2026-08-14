@@ -7,5 +7,9 @@ export function getTheme() {
 
 export function applyTheme(theme) {
   document.documentElement.dataset.theme = theme;
-  try { localStorage.setItem(STORAGE_KEY, theme); } catch { /* storage unavailable */ }
+  try {
+    localStorage.setItem(STORAGE_KEY, theme);
+  } catch {
+    /* storage unavailable */
+  }
 }

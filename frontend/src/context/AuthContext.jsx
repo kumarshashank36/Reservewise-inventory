@@ -7,11 +7,17 @@ const draftKeyFor = (userId) => `reservewise.draft.${userId}`;
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { return null; }
+    try {
+      return JSON.parse(localStorage.getItem(SESSION_KEY));
+    } catch {
+      return null;
+    }
   });
   const [loading, setLoading] = useState(Boolean(session?.token));
   const tokenRef = useRef(session?.token);
-  useEffect(() => { tokenRef.current = session?.token; }, [session?.token]);
+  useEffect(() => {
+    tokenRef.current = session?.token;
+  }, [session?.token]);
 
   const refreshSession = useCallback(async (token) => {
     try {
@@ -53,7 +59,13 @@ export function AuthProvider({ children }) {
   const logout = () => {
     localStorage.removeItem(SESSION_KEY);
     // The reservation draft is user intent tied to this account; drop it on sign-out.
-    if (session?.user?.id) { try { localStorage.removeItem(draftKeyFor(session.user.id)); } catch { /* storage unavailable */ } }
+    if (session?.user?.id) {
+      try {
+        localStorage.removeItem(draftKeyFor(session.user.id));
+      } catch {
+        /* storage unavailable */
+      }
+    }
     setSession(null);
   };
 

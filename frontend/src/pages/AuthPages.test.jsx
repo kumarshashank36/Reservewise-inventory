@@ -15,12 +15,16 @@ const anonymousAuth = { session: null, loading: false, saveSession: vi.fn(), log
 function renderAuthPage(mode) {
   return render(
     <AuthContext.Provider value={anonymousAuth}>
-      <MemoryRouter><AuthPage mode={mode} /></MemoryRouter>
-    </AuthContext.Provider>
+      <MemoryRouter>
+        <AuthPage mode={mode} />
+      </MemoryRouter>
+    </AuthContext.Provider>,
   );
 }
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 afterEach(cleanup);
 
 describe('AuthPage login', () => {
@@ -36,12 +40,21 @@ describe('AuthPage login', () => {
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-long-enough-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    await waitFor(() => expect(api.login).toHaveBeenCalledWith({ email: 'jamie@example.com', password: 'a-long-enough-password', role: 'customer' }));
+    await waitFor(() =>
+      expect(api.login).toHaveBeenCalledWith({
+        email: 'jamie@example.com',
+        password: 'a-long-enough-password',
+        role: 'customer',
+      }),
+    );
     await waitFor(() => expect(anonymousAuth.saveSession).toHaveBeenCalledWith(session));
   });
 
   it('sends the Admin sign-in type when the toggle is switched', async () => {
-    const session = { token: 't', user: { id: 'a1', name: 'Inventory Admin', email: 'admin@example.com', role: 'admin' } };
+    const session = {
+      token: 't',
+      user: { id: 'a1', name: 'Inventory Admin', email: 'admin@example.com', role: 'admin' },
+    };
     api.login.mockResolvedValue({ payload: session });
     renderAuthPage('login');
 
@@ -53,12 +66,23 @@ describe('AuthPage login', () => {
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-long-enough-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    await waitFor(() => expect(api.login).toHaveBeenCalledWith({ email: 'admin@example.com', password: 'a-long-enough-password', role: 'admin' }));
+    await waitFor(() =>
+      expect(api.login).toHaveBeenCalledWith({
+        email: 'admin@example.com',
+        password: 'a-long-enough-password',
+        role: 'admin',
+      }),
+    );
     await waitFor(() => expect(anonymousAuth.saveSession).toHaveBeenCalledWith(session));
   });
 
   it('shows the role-mismatch error when the account does not match the selected toggle', async () => {
-    api.login.mockRejectedValue(new ApiError('This is an admin account. Select the Admin sign-in type and try again.', { status: 403, code: 'ROLE_MISMATCH' }));
+    api.login.mockRejectedValue(
+      new ApiError('This is an admin account. Select the Admin sign-in type and try again.', {
+        status: 403,
+        code: 'ROLE_MISMATCH',
+      }),
+    );
     renderAuthPage('login');
 
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'admin@example.com' } });
@@ -66,11 +90,15 @@ describe('AuthPage login', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
     await screen.findByRole('alert');
-    expect(screen.getByText('This is an admin account. Select the Admin sign-in type and try again.')).toBeInTheDocument();
+    expect(
+      screen.getByText('This is an admin account. Select the Admin sign-in type and try again.'),
+    ).toBeInTheDocument();
   });
 
   it('shows the server error when the credentials are wrong', async () => {
-    api.login.mockRejectedValue(new ApiError('Email or password is incorrect', { status: 401, code: 'INVALID_CREDENTIALS' }));
+    api.login.mockRejectedValue(
+      new ApiError('Email or password is incorrect', { status: 401, code: 'INVALID_CREDENTIALS' }),
+    );
     renderAuthPage('login');
 
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'jamie@example.com' } });
@@ -84,7 +112,10 @@ describe('AuthPage login', () => {
 
 describe('AuthPage register', () => {
   it('registers a customer with name, email, and password', async () => {
-    const session = { token: 't', user: { id: 'u2', name: 'New Customer', email: 'new@example.com', role: 'customer' } };
+    const session = {
+      token: 't',
+      user: { id: 'u2', name: 'New Customer', email: 'new@example.com', role: 'customer' },
+    };
     api.register.mockResolvedValue({ payload: session });
     renderAuthPage('register');
 
@@ -93,12 +124,23 @@ describe('AuthPage register', () => {
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-long-enough-password' } });
     fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
-    await waitFor(() => expect(api.register).toHaveBeenCalledWith({ name: 'New Customer', email: 'new@example.com', password: 'a-long-enough-password' }));
+    await waitFor(() =>
+      expect(api.register).toHaveBeenCalledWith({
+        name: 'New Customer',
+        email: 'new@example.com',
+        password: 'a-long-enough-password',
+      }),
+    );
     await waitFor(() => expect(anonymousAuth.saveSession).toHaveBeenCalledWith(session));
   });
 
   it('surfaces a validation error from the API', async () => {
-    api.register.mockRejectedValue(new ApiError('An account already exists for this email address', { status: 409, code: 'EMAIL_ALREADY_REGISTERED' }));
+    api.register.mockRejectedValue(
+      new ApiError('An account already exists for this email address', {
+        status: 409,
+        code: 'EMAIL_ALREADY_REGISTERED',
+      }),
+    );
     renderAuthPage('register');
 
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'New Customer' } });

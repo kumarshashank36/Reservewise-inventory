@@ -12,18 +12,29 @@ export function WishlistProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (session.user.role !== 'customer') { setLoading(false); return; }
+    if (session.user.role !== 'customer') {
+      setLoading(false);
+      return;
+    }
     let cancelled = false;
-    const load = () => api.wishlist(session.token).then(({ payload }) => {
-      if (cancelled) return;
-      setIds(new Set(payload.items.map((item) => item.product._id)));
-    }).catch(() => {
-      if (!cancelled) setIds(new Set());
+    const load = () =>
+      api
+        .wishlist(session.token)
+        .then(({ payload }) => {
+          if (cancelled) return;
+          setIds(new Set(payload.items.map((item) => item.product._id)));
+        })
+        .catch(() => {
+          if (!cancelled) setIds(new Set());
+        });
+    load().finally(() => {
+      if (!cancelled) setLoading(false);
     });
-    load().finally(() => { if (!cancelled) setLoading(false); });
     // Refetch the membership set when the tab regains focus so hearts changed in
     // another tab (or another device) are reflected without a reload.
-    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') load();
+    };
     window.addEventListener('focus', onVisible);
     document.addEventListener('visibilitychange', onVisible);
     return () => {
@@ -33,20 +44,24 @@ export function WishlistProvider({ children }) {
     };
   }, [session.token]);
 
-  const toggle = useCallback(async (productId) => {
-    const current = ids;
-    const next = new Set(current);
-    const wasSaved = current.has(productId);
-    if (wasSaved) next.delete(productId); else next.add(productId);
-    setIds(next);
-    try {
-      if (wasSaved) await api.removeWishlistItem(session.token, productId);
-      else await api.addWishlistItem(session.token, productId);
-    } catch (error) {
-      setIds(current);
-      throw error;
-    }
-  }, [ids, session.token]);
+  const toggle = useCallback(
+    async (productId) => {
+      const current = ids;
+      const next = new Set(current);
+      const wasSaved = current.has(productId);
+      if (wasSaved) next.delete(productId);
+      else next.add(productId);
+      setIds(next);
+      try {
+        if (wasSaved) await api.removeWishlistItem(session.token, productId);
+        else await api.addWishlistItem(session.token, productId);
+      } catch (error) {
+        setIds(current);
+        throw error;
+      }
+    },
+    [ids, session.token],
+  );
 
   const value = useMemo(() => ({ ids, loading, toggle }), [ids, loading, toggle]);
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;

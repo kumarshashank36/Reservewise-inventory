@@ -2,7 +2,10 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ThemeToggle } from './ThemeToggle.jsx';
 
-beforeEach(() => { delete document.documentElement.dataset.theme; localStorage.clear(); });
+beforeEach(() => {
+  delete document.documentElement.dataset.theme;
+  localStorage.clear();
+});
 afterEach(cleanup);
 
 describe('ThemeToggle', () => {
@@ -13,7 +16,10 @@ describe('ThemeToggle', () => {
     fireEvent.click(button);
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
     expect(localStorage.getItem('reservewise.theme')).toBe('dark');
-    expect(screen.getByRole('button', { name: 'Switch to light mode' })).toHaveAttribute('data-tooltip', 'Switch to light mode');
+    expect(screen.getByRole('button', { name: 'Switch to light mode' })).toHaveAttribute(
+      'data-tooltip',
+      'Switch to light mode',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: 'Switch to light mode' }));
     expect(document.documentElement).toHaveAttribute('data-theme', 'light');

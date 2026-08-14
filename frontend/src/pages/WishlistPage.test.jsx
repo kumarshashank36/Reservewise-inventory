@@ -13,30 +13,55 @@ vi.mock('../services/api.js', async () => {
 
 const customerAuth = {
   session: { token: 'customer-token', user: { id: 'u1', name: 'Jamie', email: 'jamie@example.com', role: 'customer' } },
-  loading: false, saveSession: vi.fn(), logout: vi.fn()
+  loading: false,
+  saveSession: vi.fn(),
+  logout: vi.fn(),
 };
 
 function renderWishlist() {
   return render(
     <AuthContext.Provider value={customerAuth}>
-      <SnackbarProvider><WishlistProvider><CustomerWishlist /></WishlistProvider></SnackbarProvider>
-    </AuthContext.Provider>
+      <SnackbarProvider>
+        <WishlistProvider>
+          <CustomerWishlist />
+        </WishlistProvider>
+      </SnackbarProvider>
+    </AuthContext.Provider>,
   );
 }
 
 const item = (overrides = {}) => ({
-  product: { _id: 'p1', sku: 'LAMP-01', name: 'Desk Lamp', description: 'Bright', priceCents: 5900, isActive: true, onHand: 3, reserved: 0, available: 3 },
+  product: {
+    _id: 'p1',
+    sku: 'LAMP-01',
+    name: 'Desk Lamp',
+    description: 'Bright',
+    priceCents: 5900,
+    isActive: true,
+    onHand: 3,
+    reserved: 0,
+    available: 3,
+  },
   addedAt: new Date().toISOString(),
-  ...overrides
+  ...overrides,
 });
 
-beforeEach(() => { vi.clearAllMocks(); });
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 afterEach(cleanup);
 
 describe('CustomerWishlist', () => {
   it('shows saved products with live availability and reserves through the normal flow', async () => {
     api.wishlist.mockResolvedValue({ payload: { items: [item()] } });
-    api.createReservation.mockResolvedValue({ payload: { reservation: { createdAt: new Date(Date.now() - 10 * 60_000).toISOString(), expiresAt: new Date().toISOString() } } });
+    api.createReservation.mockResolvedValue({
+      payload: {
+        reservation: {
+          createdAt: new Date(Date.now() - 10 * 60_000).toISOString(),
+          expiresAt: new Date().toISOString(),
+        },
+      },
+    });
     renderWishlist();
 
     await screen.findByText('Desk Lamp');
@@ -71,7 +96,12 @@ describe('CustomerWishlist', () => {
 
   it('shows the server availability message when a reserve fails', async () => {
     api.wishlist.mockResolvedValue({ payload: { items: [item()] } });
-    api.createReservation.mockRejectedValue(new ApiError('Desk Lamp no longer has enough available inventory', { status: 409, code: 'INSUFFICIENT_INVENTORY' }));
+    api.createReservation.mockRejectedValue(
+      new ApiError('Desk Lamp no longer has enough available inventory', {
+        status: 409,
+        code: 'INSUFFICIENT_INVENTORY',
+      }),
+    );
     renderWishlist();
 
     await screen.findByText('Desk Lamp');
@@ -116,8 +146,12 @@ describe('CustomerWishlist', () => {
 
   it('paginates the wishlist', async () => {
     api.wishlist
-      .mockResolvedValueOnce({ payload: { items: [item()], pagination: { page: 1, limit: 10, total: 12, totalPages: 2 } } })
-      .mockResolvedValue({ payload: { items: [item()], pagination: { page: 1, limit: 10, total: 12, totalPages: 2 } } });
+      .mockResolvedValueOnce({
+        payload: { items: [item()], pagination: { page: 1, limit: 10, total: 12, totalPages: 2 } },
+      })
+      .mockResolvedValue({
+        payload: { items: [item()], pagination: { page: 1, limit: 10, total: 12, totalPages: 2 } },
+      });
     renderWishlist();
 
     await screen.findByText('Desk Lamp');

@@ -14,24 +14,51 @@ vi.mock('../services/api.js', async () => {
 
 const customerAuth = {
   session: { token: 'customer-token', user: { id: 'u1', name: 'Jamie', email: 'jamie@example.com', role: 'customer' } },
-  loading: false, saveSession: vi.fn(), logout: vi.fn()
+  loading: false,
+  saveSession: vi.fn(),
+  logout: vi.fn(),
 };
 
 function renderWithAuth(children) {
-  return render(<AuthContext.Provider value={customerAuth}><MemoryRouter><SnackbarProvider><WishlistProvider>{children}</WishlistProvider></SnackbarProvider></MemoryRouter></AuthContext.Provider>);
+  return render(
+    <AuthContext.Provider value={customerAuth}>
+      <MemoryRouter>
+        <SnackbarProvider>
+          <WishlistProvider>{children}</WishlistProvider>
+        </SnackbarProvider>
+      </MemoryRouter>
+    </AuthContext.Provider>,
+  );
 }
 
-const product = (overrides = {}) => ({ _id: 'p1', sku: 'LAMP-01', name: 'Desk Lamp', description: 'Bright', priceCents: 5900, onHand: 3, reserved: 0, available: 3, isActive: true, ...overrides });
+const product = (overrides = {}) => ({
+  _id: 'p1',
+  sku: 'LAMP-01',
+  name: 'Desk Lamp',
+  description: 'Bright',
+  priceCents: 5900,
+  onHand: 3,
+  reserved: 0,
+  available: 3,
+  isActive: true,
+  ...overrides,
+});
 
 const reservation = (overrides = {}) => ({
-  _id: 'abcdef123456', status: 'pending', customerId: 'u1',
+  _id: 'abcdef123456',
+  status: 'pending',
+  customerId: 'u1',
   items: [{ productId: 'p1', sku: 'LAMP-01', name: 'Desk Lamp', quantity: 1, priceCents: 5900 }],
   createdAt: new Date(Date.now() - 60_000).toISOString(),
   expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
-  ...overrides
+  ...overrides,
 });
 
-beforeEach(() => { vi.clearAllMocks(); localStorage.clear(); api.wishlist.mockResolvedValue({ payload: { items: [] } }); });
+beforeEach(() => {
+  vi.clearAllMocks();
+  localStorage.clear();
+  api.wishlist.mockResolvedValue({ payload: { items: [] } });
+});
 afterEach(cleanup);
 
 describe('CustomerCatalog', () => {
@@ -53,7 +80,14 @@ describe('CustomerCatalog', () => {
 
   it('adds items to the cart and reserves them with a stable idempotency key', async () => {
     api.products.mockResolvedValue({ payload: { products: [product()] } });
-    api.createReservation.mockResolvedValue({ payload: { reservation: reservation({ createdAt: new Date(Date.now() - 10 * 60_000).toISOString(), expiresAt: new Date().toISOString() }) } });
+    api.createReservation.mockResolvedValue({
+      payload: {
+        reservation: reservation({
+          createdAt: new Date(Date.now() - 10 * 60_000).toISOString(),
+          expiresAt: new Date().toISOString(),
+        }),
+      },
+    });
     renderWithAuth(<CustomerCatalog />);
     await screen.findByText('Desk Lamp');
 
@@ -73,7 +107,14 @@ describe('CustomerCatalog', () => {
 
   it('shows reservation outcomes as dismissible snackbars', async () => {
     api.products.mockResolvedValue({ payload: { products: [product()] } });
-    api.createReservation.mockResolvedValue({ payload: { reservation: reservation({ createdAt: new Date(Date.now() - 10 * 60_000).toISOString(), expiresAt: new Date().toISOString() }) } });
+    api.createReservation.mockResolvedValue({
+      payload: {
+        reservation: reservation({
+          createdAt: new Date(Date.now() - 10 * 60_000).toISOString(),
+          expiresAt: new Date().toISOString(),
+        }),
+      },
+    });
     renderWithAuth(<CustomerCatalog />);
     await screen.findByText('Desk Lamp');
 
@@ -88,7 +129,12 @@ describe('CustomerCatalog', () => {
 
   it('shows the server error and retries with the same idempotency key when a reservation fails', async () => {
     api.products.mockResolvedValue({ payload: { products: [product()] } });
-    api.createReservation.mockRejectedValue(new ApiError('Desk Lamp no longer has enough available inventory', { status: 409, code: 'INSUFFICIENT_INVENTORY' }));
+    api.createReservation.mockRejectedValue(
+      new ApiError('Desk Lamp no longer has enough available inventory', {
+        status: 409,
+        code: 'INSUFFICIENT_INVENTORY',
+      }),
+    );
     renderWithAuth(<CustomerCatalog />);
     await screen.findByText('Desk Lamp');
 
@@ -137,7 +183,14 @@ describe('CustomerCatalog', () => {
 
   it('persists the draft and clears it after a successful reservation', async () => {
     api.products.mockResolvedValue({ payload: { products: [product()] } });
-    api.createReservation.mockResolvedValue({ payload: { reservation: reservation({ createdAt: new Date(Date.now() - 10 * 60_000).toISOString(), expiresAt: new Date().toISOString() }) } });
+    api.createReservation.mockResolvedValue({
+      payload: {
+        reservation: reservation({
+          createdAt: new Date(Date.now() - 10 * 60_000).toISOString(),
+          expiresAt: new Date().toISOString(),
+        }),
+      },
+    });
     renderWithAuth(<CustomerCatalog />);
     await screen.findByText('Desk Lamp');
 
@@ -170,7 +223,14 @@ describe('CustomerCatalog', () => {
 
     // Simulate navigating away and back: the draft and key survive the remount.
     first.unmount();
-    api.createReservation.mockResolvedValue({ payload: { reservation: reservation({ createdAt: new Date(Date.now() - 10 * 60_000).toISOString(), expiresAt: new Date().toISOString() }) } });
+    api.createReservation.mockResolvedValue({
+      payload: {
+        reservation: reservation({
+          createdAt: new Date(Date.now() - 10 * 60_000).toISOString(),
+          expiresAt: new Date().toISOString(),
+        }),
+      },
+    });
     renderWithAuth(<CustomerCatalog />);
     await screen.findByRole('heading', { name: 'Desk Lamp' });
     expect(screen.getByText('1 unit selected')).toBeInTheDocument();
@@ -181,8 +241,15 @@ describe('CustomerCatalog', () => {
 
   it('paginates the catalog and navigates between pages', async () => {
     api.products
-      .mockResolvedValueOnce({ payload: { products: [product()], pagination: { page: 1, limit: 10, total: 12, totalPages: 2 } } })
-      .mockResolvedValueOnce({ payload: { products: [product({ _id: 'p2', sku: 'LAMP-02', name: 'Second Lamp', available: 2, onHand: 2 })], pagination: { page: 2, limit: 10, total: 12, totalPages: 2 } } });
+      .mockResolvedValueOnce({
+        payload: { products: [product()], pagination: { page: 1, limit: 10, total: 12, totalPages: 2 } },
+      })
+      .mockResolvedValueOnce({
+        payload: {
+          products: [product({ _id: 'p2', sku: 'LAMP-02', name: 'Second Lamp', available: 2, onHand: 2 })],
+          pagination: { page: 2, limit: 10, total: 12, totalPages: 2 },
+        },
+      });
     renderWithAuth(<CustomerCatalog />);
 
     await screen.findByText('Desk Lamp');
@@ -190,12 +257,20 @@ describe('CustomerCatalog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
     await screen.findByText('Second Lamp');
-    expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 2, limit: 10, category: null, search: null, sort: 'name' });
+    expect(api.products).toHaveBeenLastCalledWith('customer-token', {
+      page: 2,
+      limit: 10,
+      category: null,
+      search: null,
+      sort: 'name',
+    });
     expect(screen.getByText(/Page 2 of 2/)).toBeInTheDocument();
   });
 
   it('shows the pager even on a single page so pagination stays discoverable', async () => {
-    api.products.mockResolvedValue({ payload: { products: [product()], pagination: { page: 1, limit: 10, total: 3, totalPages: 1 } } });
+    api.products.mockResolvedValue({
+      payload: { products: [product()], pagination: { page: 1, limit: 10, total: 3, totalPages: 1 } },
+    });
     renderWithAuth(<CustomerCatalog />);
 
     await screen.findByText('Desk Lamp');
@@ -205,7 +280,9 @@ describe('CustomerCatalog', () => {
   });
 
   it('changes the page size and resets to the first page', async () => {
-    api.products.mockResolvedValue({ payload: { products: [product()], pagination: { page: 2, limit: 10, total: 12, totalPages: 2 } } });
+    api.products.mockResolvedValue({
+      payload: { products: [product()], pagination: { page: 2, limit: 10, total: 12, totalPages: 2 } },
+    });
     renderWithAuth(<CustomerCatalog />);
 
     await screen.findByText('Desk Lamp');
@@ -213,11 +290,24 @@ describe('CustomerCatalog', () => {
     expect(size).toHaveValue('10');
 
     fireEvent.change(size, { target: { value: '20' } });
-    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 20, category: null, search: null, sort: 'name' }));
+    await waitFor(() =>
+      expect(api.products).toHaveBeenLastCalledWith('customer-token', {
+        page: 1,
+        limit: 20,
+        category: null,
+        search: null,
+        sort: 'name',
+      }),
+    );
   });
 
   it('filters the catalog by category with chips and shows the category on cards', async () => {
-    api.products.mockResolvedValue({ payload: { products: [product({ category: 'electronics' })], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    api.products.mockResolvedValue({
+      payload: {
+        products: [product({ category: 'electronics' })],
+        pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+      },
+    });
     renderWithAuth(<CustomerCatalog />);
 
     await screen.findByText('Desk Lamp');
@@ -226,12 +316,25 @@ describe('CustomerCatalog', () => {
     expect(within(screen.getByRole('article')).getByText('Electronics')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Furniture' }));
-    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 10, category: 'furniture', search: null, sort: 'name' }));
+    await waitFor(() =>
+      expect(api.products).toHaveBeenLastCalledWith('customer-token', {
+        page: 1,
+        limit: 10,
+        category: 'furniture',
+        search: null,
+        sort: 'name',
+      }),
+    );
     expect(screen.getByRole('button', { name: 'Furniture' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows product images in the reservation draft', async () => {
-    api.products.mockResolvedValue({ payload: { products: [product({ imageUrl: 'https://example.com/lamp.jpg', category: 'electronics' })], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    api.products.mockResolvedValue({
+      payload: {
+        products: [product({ imageUrl: 'https://example.com/lamp.jpg', category: 'electronics' })],
+        pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+      },
+    });
     renderWithAuth(<CustomerCatalog />);
 
     await screen.findByText('Desk Lamp');
@@ -239,10 +342,13 @@ describe('CustomerCatalog', () => {
     expect(screen.getAllByRole('img', { name: 'Desk Lamp' })).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Add one Desk Lamp' }));
     expect(screen.getAllByRole('img', { name: 'Desk Lamp' })).toHaveLength(2);
+    expect(screen.getByRole('heading', { name: '1 unit selected' }).closest('.cart-panel')).not.toBeNull();
   });
 
   it('debounces catalog search so typing fires a single query', async () => {
-    api.products.mockResolvedValue({ payload: { products: [product()], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    api.products.mockResolvedValue({
+      payload: { products: [product()], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } },
+    });
     renderWithAuth(<CustomerCatalog />);
 
     await screen.findByText('Desk Lamp');
@@ -253,12 +359,19 @@ describe('CustomerCatalog', () => {
 
     // Let the debounce window elapse: exactly one search request goes out.
     await new Promise((resolve) => setTimeout(resolve, 450));
-    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', expect.objectContaining({ search: 'lamp', page: 1 })));
+    await waitFor(() =>
+      expect(api.products).toHaveBeenLastCalledWith(
+        'customer-token',
+        expect.objectContaining({ search: 'lamp', page: 1 }),
+      ),
+    );
     expect(api.products.mock.calls.filter(([, params]) => params.search)).toHaveLength(1);
   });
 
   it('keeps search focus through a search-triggered reload so typing can continue', async () => {
-    api.products.mockResolvedValue({ payload: { products: [product()], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    api.products.mockResolvedValue({
+      payload: { products: [product()], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } },
+    });
     renderWithAuth(<CustomerCatalog />);
 
     await screen.findByText('Desk Lamp');
@@ -266,31 +379,61 @@ describe('CustomerCatalog', () => {
     searchInput.focus();
     fireEvent.change(searchInput, { target: { value: 'lamp' } });
     await new Promise((resolve) => setTimeout(resolve, 450));
-    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', expect.objectContaining({ search: 'lamp' })));
+    await waitFor(() =>
+      expect(api.products).toHaveBeenLastCalledWith('customer-token', expect.objectContaining({ search: 'lamp' })),
+    );
 
     // The toolbar survived the reload: the input still has focus and accepts more typing.
     expect(screen.getByRole('searchbox', { name: 'Search products' })).toHaveFocus();
     fireEvent.change(screen.getByRole('searchbox', { name: 'Search products' }), { target: { value: 'lamp shade' } });
     await new Promise((resolve) => setTimeout(resolve, 450));
-    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', expect.objectContaining({ search: 'lamp shade' })));
+    await waitFor(() =>
+      expect(api.products).toHaveBeenLastCalledWith(
+        'customer-token',
+        expect.objectContaining({ search: 'lamp shade' }),
+      ),
+    );
   });
 
   it('searches and sorts the catalog', async () => {
-    api.products.mockResolvedValue({ payload: { products: [product()], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    api.products.mockResolvedValue({
+      payload: { products: [product()], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } },
+    });
     renderWithAuth(<CustomerCatalog />);
 
     await screen.findByText('Desk Lamp');
     const searchInput = screen.getByRole('searchbox', { name: 'Search products' });
     fireEvent.change(searchInput, { target: { value: 'lamp' } });
     fireEvent.keyDown(searchInput, { key: 'Enter' });
-    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 10, category: null, search: 'lamp', sort: 'name' }));
+    await waitFor(() =>
+      expect(api.products).toHaveBeenLastCalledWith('customer-token', {
+        page: 1,
+        limit: 10,
+        category: null,
+        search: 'lamp',
+        sort: 'name',
+      }),
+    );
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Sort products' }), { target: { value: 'price-desc' } });
-    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 10, category: null, search: 'lamp', sort: 'price-desc' }));
+    await waitFor(() =>
+      expect(api.products).toHaveBeenLastCalledWith('customer-token', {
+        page: 1,
+        limit: 10,
+        category: null,
+        search: 'lamp',
+        sort: 'price-desc',
+      }),
+    );
   });
 
   it('renders product images with a graceful category fallback', async () => {
-    api.products.mockResolvedValue({ payload: { products: [product({ imageUrl: 'https://example.com/desk-lamp.jpg', category: 'home' })], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    api.products.mockResolvedValue({
+      payload: {
+        products: [product({ imageUrl: 'https://example.com/desk-lamp.jpg', category: 'home' })],
+        pagination: { page: 1, limit: 10, total: 1, totalPages: 1 },
+      },
+    });
     renderWithAuth(<CustomerCatalog />);
 
     await screen.findByText('Desk Lamp');
@@ -305,7 +448,9 @@ describe('CustomerCatalog', () => {
 
 describe('CustomerReservations pagination', () => {
   it('navigates reservation pages', async () => {
-    api.reservations.mockResolvedValueOnce({ payload: { reservations: [reservation()], pagination: { page: 1, limit: 10, total: 11, totalPages: 2 } } });
+    api.reservations.mockResolvedValueOnce({
+      payload: { reservations: [reservation()], pagination: { page: 1, limit: 10, total: 11, totalPages: 2 } },
+    });
     renderWithAuth(<CustomerReservations />);
 
     await screen.findByText(/Reservation #/);
@@ -318,7 +463,14 @@ describe('CustomerReservations pagination', () => {
 
 describe('CustomerReservations', () => {
   it('lists reservations with a live countdown and triggers release and complete', async () => {
-    api.reservations.mockResolvedValue({ payload: { reservations: [reservation(), reservation({ _id: 'fedcba654321', status: 'completed', completedAt: new Date().toISOString() })] } });
+    api.reservations.mockResolvedValue({
+      payload: {
+        reservations: [
+          reservation(),
+          reservation({ _id: 'fedcba654321', status: 'completed', completedAt: new Date().toISOString() }),
+        ],
+      },
+    });
     api.cancelReservation.mockResolvedValue({ payload: { reservation: reservation({ status: 'cancelled' }) } });
     renderWithAuth(<CustomerReservations />);
 
@@ -333,7 +485,9 @@ describe('CustomerReservations', () => {
   });
 
   it('shows an expiring state without actions once the hold window has passed', async () => {
-    api.reservations.mockResolvedValue({ payload: { reservations: [reservation({ expiresAt: new Date(Date.now() - 1000).toISOString() })] } });
+    api.reservations.mockResolvedValue({
+      payload: { reservations: [reservation({ expiresAt: new Date(Date.now() - 1000).toISOString() })] },
+    });
     renderWithAuth(<CustomerReservations />);
 
     await screen.findByText('Expiring');
@@ -344,7 +498,9 @@ describe('CustomerReservations', () => {
 
   it('shows an inline error when a transition fails', async () => {
     api.reservations.mockResolvedValue({ payload: { reservations: [reservation()] } });
-    api.cancelReservation.mockRejectedValue(new ApiError('Only pending reservations can be cancelled', { status: 409 }));
+    api.cancelReservation.mockRejectedValue(
+      new ApiError('Only pending reservations can be cancelled', { status: 409 }),
+    );
     renderWithAuth(<CustomerReservations />);
 
     await screen.findByText(/Expires in/);

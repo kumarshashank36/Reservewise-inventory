@@ -14,23 +14,33 @@ vi.mock('../services/api.js', async () => {
 
 const customerAuth = {
   session: { token: 't', user: { id: 'u1', name: 'Jamie', email: 'jamie@example.com', role: 'customer' } },
-  loading: false, saveSession: vi.fn(), logout: vi.fn()
+  loading: false,
+  saveSession: vi.fn(),
+  logout: vi.fn(),
 };
 
 function renderShell() {
   return render(
     <AuthContext.Provider value={customerAuth}>
       <MemoryRouter>
-        <WishlistProvider><ReservationCountProvider><AppShell><div>page content</div></AppShell></ReservationCountProvider></WishlistProvider>
+        <WishlistProvider>
+          <ReservationCountProvider>
+            <AppShell>
+              <div>page content</div>
+            </AppShell>
+          </ReservationCountProvider>
+        </WishlistProvider>
       </MemoryRouter>
-    </AuthContext.Provider>
+    </AuthContext.Provider>,
   );
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   api.wishlist.mockResolvedValue({ payload: { items: [] } });
-  api.reservations.mockResolvedValue({ payload: { reservations: [], pagination: { page: 1, limit: 1, total: 0, totalPages: 1 } } });
+  api.reservations.mockResolvedValue({
+    payload: { reservations: [], pagination: { page: 1, limit: 1, total: 0, totalPages: 1 } },
+  });
 });
 afterEach(cleanup);
 
@@ -70,7 +80,9 @@ describe('AppShell sign out', () => {
 describe('AppShell sidebar badges', () => {
   it('shows live wishlist and pending reservation counts', async () => {
     api.wishlist.mockResolvedValue({ payload: { items: [{ product: { _id: 'p1' } }, { product: { _id: 'p2' } }] } });
-    api.reservations.mockResolvedValue({ payload: { reservations: [], pagination: { page: 1, limit: 1, total: 3, totalPages: 3 } } });
+    api.reservations.mockResolvedValue({
+      payload: { reservations: [], pagination: { page: 1, limit: 1, total: 3, totalPages: 3 } },
+    });
     renderShell();
 
     const wishlistLink = screen.getByRole('link', { name: /Wishlist/ });
@@ -85,7 +97,9 @@ describe('AppShell sidebar badges', () => {
 
   it('hides the badges when both counts are zero', async () => {
     api.wishlist.mockResolvedValue({ payload: { items: [] } });
-    api.reservations.mockResolvedValue({ payload: { reservations: [], pagination: { page: 1, limit: 1, total: 0, totalPages: 1 } } });
+    api.reservations.mockResolvedValue({
+      payload: { reservations: [], pagination: { page: 1, limit: 1, total: 0, totalPages: 1 } },
+    });
     renderShell();
 
     await screen.findByRole('link', { name: /Wishlist/ });

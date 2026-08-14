@@ -1,2 +1,7 @@
+import { Badge } from './ui/badge.jsx';
+
 const labels = { pending: 'Pending', completed: 'Completed', cancelled: 'Cancelled', expired: 'Expired' };
-export function ReservationStatus({ status }) { return <span className={`status status-${status}`}>{labels[status] ?? status}</span>; }
+const variants = { pending: 'warning', completed: 'success', cancelled: 'muted', expired: 'muted' };
+export function ReservationStatus({ status }) {
+  return <Badge variant={variants[status] ?? 'muted'}>{labels[status] ?? status}</Badge>;
+}

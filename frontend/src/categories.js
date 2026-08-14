@@ -3,7 +3,7 @@ export const CATEGORIES = [
   { value: 'furniture', label: 'Furniture' },
   { value: 'clothing', label: 'Clothing' },
   { value: 'home', label: 'Home & Living' },
-  { value: 'stationery', label: 'Stationery' }
+  { value: 'stationery', label: 'Stationery' },
 ];
 
 export function categoryLabel(value) {
