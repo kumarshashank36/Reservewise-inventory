@@ -47,7 +47,14 @@ describe('CustomerWishlist', () => {
     await screen.findByText('Desk Lamp');
     expect(screen.getByText('3 available')).toBeInTheDocument();
 
+    // Locked until a quantity is picked.
+    const reserveButton = screen.getByRole('button', { name: 'Reserve' });
+    expect(reserveButton).toBeDisabled();
+    expect(reserveButton).toHaveAttribute('data-tooltip', 'Add at least one to reserve');
+
     fireEvent.click(screen.getByRole('button', { name: 'Add one Desk Lamp' }));
+    expect(screen.getByRole('button', { name: 'Reserve' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Reserve' })).not.toHaveAttribute('data-tooltip');
     fireEvent.click(screen.getByRole('button', { name: 'Reserve' }));
 
     await waitFor(() => expect(api.createReservation).toHaveBeenCalledTimes(1));

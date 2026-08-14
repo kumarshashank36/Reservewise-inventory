@@ -104,7 +104,7 @@ export function CustomerWishlist() {
         <p>{product.description || 'No description provided.'}</p>
         <small className="wishlist-saved">Saved {new Date(addedAt).toLocaleString()}</small>
         <div className="product-card-footer"><strong>{money(product.priceCents)}</strong><div className="stepper"><button disabled={!quantity} onClick={() => setQuantity(product, quantity - 1)} aria-label={`Remove one ${product.name}`}>−</button><span>{quantity}</span><button disabled={!available || quantity >= available} onClick={() => setQuantity(product, quantity + 1)} aria-label={`Add one ${product.name}`}>+</button></div></div>
-        <button className="button button-primary wishlist-reserve" disabled={actionId === product._id || !quantity} onClick={() => reserve(product)}>{actionId === product._id && quantity ? 'Securing…' : 'Reserve'}</button>
+        <button className={`button button-primary wishlist-reserve${!quantity ? ' locked' : ''}`} data-tooltip={!quantity ? 'Add at least one to reserve' : undefined} disabled={actionId === product._id || !quantity} onClick={() => reserve(product)}>{!quantity && <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>}{actionId === product._id && quantity ? 'Securing…' : 'Reserve'}</button>
       </article>;
     })}</div> : <EmptyState title="Nothing saved yet" detail="Add products from the catalog and reserve them here when you are ready." />}
     <Pagination pagination={pagination} onChange={setPage} onLimitChange={(next) => { setPage(1); setLimit(next); }} label="products" /></>;
