@@ -163,8 +163,7 @@ Fast path for the 10-minute expiry (scenario 9):
   Reserve an item and watch the countdown reach zero, the row show "Expiring", and the stock
   return within ~30s (the expiry worker interval).
 
-Detailed steps and expected outcomes: MANUAL_VERIFICATION.md
-Automated equivalents: npm test  (backend 55 tests, frontend 63 tests) and npm run lint.
+Automated equivalents: npm test  (backend 56 tests, frontend 65 tests) and npm run lint.
 
 Note: the seed step above resets the seeded admin's and customers' passwords to SEED_ADMIN_PASSWORD / SEED_CUSTOMER_PASSWORD.
 Press Ctrl+C when you are done (services this script started stop; MongoDB keeps running).
