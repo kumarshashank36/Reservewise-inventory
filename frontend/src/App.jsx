@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { SnackbarProvider } from './context/SnackbarContext.jsx';
@@ -6,8 +6,8 @@ import { WishlistProvider } from './context/WishlistContext.jsx';
 import { ReservationCountProvider } from './context/ReservationCountContext.jsx';
 import { AppShell } from './components/AppShell.jsx';
 import { LoadingState } from './components/AsyncState.jsx';
-import { ThemeToggle } from './components/ThemeToggle.jsx';
-import { buttonVariants } from './components/ui/button.jsx';
+import { Watermark } from './components/Watermark.jsx';
+import { applyTheme, getTheme } from './theme.js';
 
 // Route-level code splitting: each page is its own chunk, fetched only when
 // visited. Customers never download admin code, admins never download customer
@@ -39,61 +39,41 @@ function AuthFallback() {
   );
 }
 
+// Landing-only theme toggle: a faithful copy of the ThemeToggle from commit
+// 814ac74 so the landing keeps its exact look without touching the shared
+// toggle used on the auth page and in the app shell.
+function LandingThemeToggle() {
+  const [theme, setTheme] = useState(getTheme);
+  const toggle = () => {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    applyTheme(next);
+    setTheme(next);
+  };
+  return <button type="button" className="theme-toggle" data-tooltip={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggle}>{theme === 'dark' ? '☀' : '☾'}</button>;
+}
+
 function LandingPage() {
   return (
-    <main className="landing-surface min-h-screen overflow-hidden bg-[#e7e9f9] px-5 py-5 text-[#14152b] sm:px-10 lg:px-[8vw]">
-      <nav className="mx-auto flex max-w-7xl items-center justify-between" aria-label="Main navigation">
-        <Link className="brand-mark text-2xl font-bold tracking-[-.08em] sm:text-3xl" to="/">
-          reserve<span className="text-[#1e40ff]">wise</span>
-        </Link>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <Link className="hidden px-3 text-sm text-[#53536a] sm:block" to="/login">
-            Sign in
-          </Link>
-          <Link className={buttonVariants({ size: 'sm' })} to="/register">
-            Create account
-          </Link>
+    <main className="landing-shell">
+      <nav className="site-nav" aria-label="Main navigation">
+        <Link className="brand" to="/">reserve<span>wise</span></Link>
+        <div className="nav-actions">
+          <LandingThemeToggle />
         </div>
       </nav>
-      <section className="relative mx-auto grid max-w-7xl gap-12 pt-24 pb-24 lg:grid-cols-[1.15fr_.85fr] lg:items-center lg:py-36">
-        <div className="relative z-10">
-          <p className="mb-5 text-xs font-bold tracking-[.2em] text-[#1e40ff] uppercase">
-            Inventory, held with confidence
-          </p>
-          <h1 className="max-w-3xl text-5xl font-normal tracking-[-.075em] sm:text-7xl">Every unit accounted for.</h1>
-          <p className="mt-7 max-w-xl text-lg leading-8 text-[#53536a]">
-            Reserve scarce inventory without the guesswork. A calm, precise workflow for customers and operations teams.
-          </p>
-          <div className="mt-9 flex flex-wrap gap-3">
-            <Link className={buttonVariants({ size: 'lg' })} to="/register">
-              Start reserving
-            </Link>
-            <Link className={buttonVariants({ variant: 'secondary', size: 'lg' })} to="/login">
-              Sign in to your account
-            </Link>
-          </div>
-        </div>
-        <div className="grid aspect-square max-w-md place-items-center rounded-[3rem] border border-[#1e40ff]/15 bg-[#1e40ff] shadow-[20px_25px_70px_rgba(30,64,255,.2)]">
-          <span className="text-center text-5xl font-normal tracking-[-.08em] text-[#e7e9f9] sm:text-7xl">
-            reserve
-            <br />
-            wise
-          </span>
+      <section className="hero">
+        <p className="eyebrow">Inventory, held with confidence</p>
+        <h1>Every unit accounted for.</h1>
+        <p className="hero-copy">Reserve scarce inventory without the guesswork. A calmer, precise workflow for customers and operations teams.</p>
+        <div className="hero-actions">
+          <Link className="button button-primary" to="/register">Start reserving</Link>
+          <Link className="button button-secondary" to="/login">Sign in to your account</Link>
         </div>
       </section>
-      <section className="mx-auto grid max-w-7xl gap-3 md:grid-cols-3" aria-label="Product benefits">
-        {[
-          ['01', 'Accurate stock', 'Availability is calculated and protected at the moment you reserve.'],
-          ['02', 'Time-bound holds', 'Pending reservations release automatically when they are no longer needed.'],
-          ['03', 'Clear control', 'Customers and operations each see exactly what matters.'],
-        ].map(([number, title, detail]) => (
-          <article className="rounded-3xl border border-black/10 bg-white/55 p-6" key={number}>
-            <span className="text-xs font-bold tracking-[.15em] text-[#1e40ff]">{number}</span>
-            <h2 className="mt-7 text-lg font-medium tracking-[-.035em]">{title}</h2>
-            <p className="mt-2 text-sm leading-6 text-[#53536a]">{detail}</p>
-          </article>
-        ))}
+      <section className="assurance-grid" aria-label="Product benefits">
+        <article><span>01</span><h2>Accurate stock</h2><p>Availability is calculated and protected at the moment you reserve.</p></article>
+        <article><span>02</span><h2>Time-bound holds</h2><p>Pending reservations release automatically when they are no longer needed.</p></article>
+        <article><span>03</span><h2>Clear control</h2><p>Customers and inventory administrators each see exactly what matters.</p></article>
       </section>
     </main>
   );
@@ -181,6 +161,7 @@ export default function App() {
           </Route>
           <Route path="*" element={<LandingPage />} />
         </Routes>
+        <Watermark />
       </SnackbarProvider>
     </AuthProvider>
   );
