@@ -1,11 +1,24 @@
+import { lazy, Suspense } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { WishlistProvider } from './context/WishlistContext.jsx';
 import { AppShell } from './components/AppShell.jsx';
-import { AuthPage } from './pages/AuthPages.jsx';
-import { CustomerCatalog, CustomerReservations } from './pages/CustomerPages.jsx';
-import { CustomerWishlist } from './pages/WishlistPage.jsx';
-import { AdminInventory, AdminReservations, AdminUsers } from './pages/AdminPages.jsx';
+import { LoadingState } from './components/AsyncState.jsx';
+
+// Route-level code splitting: each page is its own chunk, fetched only when
+// visited. Customers never download admin code, admins never download customer
+// code, and the auth flow stays out of the initial bundle.
+const AuthPage = lazy(() => import('./pages/AuthPages.jsx').then((module) => ({ default: module.AuthPage })));
+const CustomerCatalog = lazy(() => import('./pages/CustomerCatalogPage.jsx').then((module) => ({ default: module.CustomerCatalog })));
+const CustomerWishlist = lazy(() => import('./pages/WishlistPage.jsx').then((module) => ({ default: module.CustomerWishlist })));
+const CustomerReservations = lazy(() => import('./pages/CustomerReservationsPage.jsx').then((module) => ({ default: module.CustomerReservations })));
+const AdminInventory = lazy(() => import('./pages/AdminInventoryPage.jsx').then((module) => ({ default: module.AdminInventory })));
+const AdminReservations = lazy(() => import('./pages/AdminReservationsPage.jsx').then((module) => ({ default: module.AdminReservations })));
+const AdminUsers = lazy(() => import('./pages/AdminUsersPage.jsx').then((module) => ({ default: module.AdminUsers })));
+
+function AuthFallback() {
+  return <main className="placeholder-page"><span className="spinner" />Loading sign-in…</main>;
+}
 
 function LandingPage() {
   return (
@@ -45,17 +58,18 @@ function Protected({ role, children }) {
 
 // One shared layout for the whole customer area: the WishlistProvider (and the shell)
 // stay mounted across Catalog / Wishlist / My reservations navigation, so wishlist
-// membership toggled on one page is immediately reflected on the others.
+// membership toggled on one page is immediately reflected on the others. The lazy
+// pages suspend inside the shell so the sidebar stays visible while chunks load.
 function CustomerLayout() {
-  return <Protected role="customer"><WishlistProvider><Outlet /></WishlistProvider></Protected>;
+  return <Protected role="customer"><WishlistProvider><Suspense fallback={<LoadingState label="Loading workspace" />}><Outlet /></Suspense></WishlistProvider></Protected>;
 }
 
 export default function App() {
   return (
     <AuthProvider><Routes>
-      <Route path="/" element={<LandingPage />} /><Route path="/login" element={<AuthPage mode="login" />} /><Route path="/register" element={<AuthPage mode="register" />} />
+      <Route path="/" element={<LandingPage />} /><Route path="/login" element={<Suspense fallback={<AuthFallback />}><AuthPage mode="login" /></Suspense>} /><Route path="/register" element={<Suspense fallback={<AuthFallback />}><AuthPage mode="register" /></Suspense>} />
       <Route path="/app" element={<CustomerLayout />}><Route index element={<CustomerCatalog />} /><Route path="wishlist" element={<CustomerWishlist />} /><Route path="reservations" element={<CustomerReservations />} /></Route>
-      <Route path="/admin" element={<Protected role="admin"><AdminInventory /></Protected>} /><Route path="/admin/reservations" element={<Protected role="admin"><AdminReservations /></Protected>} /><Route path="/admin/users" element={<Protected role="admin"><AdminUsers /></Protected>} />
+      <Route path="/admin" element={<Protected role="admin"><Suspense fallback={<LoadingState label="Loading inventory" />}><AdminInventory /></Suspense></Protected>} /><Route path="/admin/reservations" element={<Protected role="admin"><Suspense fallback={<LoadingState label="Loading reservations" />}><AdminReservations /></Suspense></Protected>} /><Route path="/admin/users" element={<Protected role="admin"><Suspense fallback={<LoadingState label="Loading team" />}><AdminUsers /></Suspense></Protected>} />
       <Route path="*" element={<LandingPage />} />
     </Routes></AuthProvider>
   );
