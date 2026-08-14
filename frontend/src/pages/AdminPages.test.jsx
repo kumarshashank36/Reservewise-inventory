@@ -86,13 +86,14 @@ describe('AdminInventory', () => {
     await screen.findByText('Desk Lamp');
 
     fireEvent.click(screen.getByRole('button', { name: 'Add product' }));
+    expect(screen.getByRole('dialog', { name: 'Add product' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('SKU'), { target: { value: 'NEW-01' } });
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'New Item' } });
     fireEvent.change(screen.getByLabelText('Price (cents)'), { target: { value: '100' } });
     fireEvent.change(screen.getByLabelText('On hand'), { target: { value: '4' } });
     fireEvent.change(screen.getByLabelText('Category'), { target: { value: 'furniture' } });
     fireEvent.change(screen.getByLabelText('Image URL'), { target: { value: 'https://example.com/new-item.jpg' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add product' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create product' }));
     await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith('admin-token', expect.objectContaining({ sku: 'NEW-01', priceCents: 100, onHand: 4, category: 'furniture', imageUrl: 'https://example.com/new-item.jpg' })));
     expect(await screen.findByText('New Item added to the catalog.')).toBeInTheDocument();
 
@@ -122,10 +123,12 @@ describe('AdminUsers', () => {
     await screen.findByText('Inventory Admin');
     expect(screen.getByText('admin')).toBeInTheDocument();
 
+    fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
+    expect(screen.getByRole('dialog', { name: 'Add account' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Second Admin' } });
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'second@example.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-long-enough-password' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     await waitFor(() => expect(api.createUser).toHaveBeenCalledWith('admin-token', { name: 'Second Admin', email: 'second@example.com', password: 'a-long-enough-password', role: 'admin' }));
   });
@@ -137,11 +140,12 @@ describe('AdminUsers', () => {
 
     await screen.findByText('No accounts yet');
 
+    fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
     fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Duplicate' } });
     fireEvent.change(screen.getByLabelText('Email address'), { target: { value: 'dup@example.com' } });
     fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'a-long-enough-password' } });
     fireEvent.change(screen.getByLabelText('Role'), { target: { value: 'customer' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Add account' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Create account' }));
 
     await screen.findByText('An account already exists for this email address');
     expect(api.createUser).toHaveBeenCalledWith('admin-token', expect.objectContaining({ role: 'customer' }));

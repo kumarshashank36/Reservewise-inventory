@@ -23,6 +23,7 @@ afterEach(cleanup);
 describe('AppShell sign out', () => {
   it('opens a centered confirmation dialog and signs out on confirm', () => {
     renderShell();
+    expect(screen.getByRole('button', { name: 'Sign out' })).toHaveAttribute('data-tooltip', 'Sign out');
     fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
 
     expect(customerAuth.logout).not.toHaveBeenCalled();

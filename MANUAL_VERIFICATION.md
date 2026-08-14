@@ -116,9 +116,10 @@ HOLD_MINUTES=1 npm run verify:ui
 
 ### 14. Admin catalog control
 
-1. Click **Add product**, fill SKU/name/price/on-hand → submit.
-2. **Expected:** the new product appears in the table and in the customer catalog (active by default).
-3. **Deactivate** a product → it disappears from the customer catalog but stays in the admin table. **Activate** restores it.
+1. Click **Add product** → a centered **dialog** opens with the product form.
+2. Fill SKU/name/price/on-hand/category/image → **Create product** (or Cancel/Escape to dismiss).
+3. **Expected:** a success snackbar appears, the dialog closes, and the new product shows in the table and in the customer catalog (active by default).
+4. **Deactivate** a product → it disappears from the customer catalog but stays in the admin table. **Activate** restores it.
 
 ### 15. Admin reservation audit
 
@@ -141,8 +142,8 @@ HOLD_MINUTES=1 npm run verify:ui
 
 1. As admin, open **Team** in the sidebar.
 2. **Expected:** every account is listed with name, email, role badge, and creation date.
-3. Fill the form to add a new **Admin** account (name, unique email, 10+ character password) → **Add account**.
-4. **Expected:** the account appears in the list; a duplicate email or a short password shows an error.
+3. Click **Add account** → a centered **dialog** opens; fill name, unique email, 10+ character password, role → **Create account**.
+4. **Expected:** a success snackbar appears, the dialog closes, and the account appears in the list; a duplicate email or a short password shows an error.
 5. Sign out, then sign in as the new account with the **Admin** toggle → lands in the admin workspace.
 6. **Expected:** signing in as that same account with the **Customer** toggle shows the role-mismatch error.
    *Rule: open self-registration stays customer-only; only admins can provision admin accounts.*
@@ -162,12 +163,12 @@ HOLD_MINUTES=1 npm run verify:ui
 ### 20. Wishlist
 
 1. As a customer, open the **Catalog** and click the **♡** heart on a product card.
-2. **Expected:** the heart fills to ♥ immediately; open **Wishlist** in the sidebar — the product is listed with live availability and a "Saved products are not reserved" note.
+2. **Expected:** the heart fills to ♥ immediately; open **Wishlist** in the sidebar — the product appears as a **card** (photo, category, price, availability, stepper, Reserve) just like the catalog, with a filled heart to remove it and a "Saved products are not reserved" note.
 3. **Expected:** catalog availability is unchanged by hearting (wishlist never holds stock); the admin inventory view also shows no change.
 4. In the Wishlist, use the stepper to pick a quantity and click **Reserve**.
 5. **Expected:** a hold success notice appears, availability drops in the wishlist, and the item shows under My reservations with its countdown. The wishlist entry remains.
 6. Add a product with on-hand = 1 (as admin), heart it as customer A, and have customer B (incognito) reserve the last unit.
-7. **Expected:** customer A's wishlist now shows **Unavailable**; reserving it from the wishlist fails with the insufficient-inventory message while the item stays saved.
+7. **Expected:** customer A's wishlist now shows **Out of stock**; reserving it from the wishlist fails with the insufficient-inventory message while the item stays saved.
 8. Click **Remove** on a wishlist item.
 9. **Expected:** the item disappears and inventory is untouched.
    *Rule: wishlists are per-customer bookmarks; only a successful reservation changes inventory.*

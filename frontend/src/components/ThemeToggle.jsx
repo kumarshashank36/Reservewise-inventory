@@ -11,5 +11,5 @@ export function ThemeToggle() {
     applyTheme(next);
     setTheme(next);
   };
-  return <button type="button" className="theme-toggle" aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggle}>{theme === 'dark' ? '☀' : '☾'}</button>;
+  return <button type="button" className="theme-toggle" data-tooltip={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggle}>{theme === 'dark' ? '☀' : '☾'}</button>;
 }

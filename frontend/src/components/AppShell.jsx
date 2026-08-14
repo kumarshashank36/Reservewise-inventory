@@ -25,7 +25,7 @@ export function AppShell({ children }) {
           <NavLink to="/app/reservations">My reservations</NavLink>
         </>}
       </nav>
-      <div className="account-block"><div className="avatar">{session.user.name.slice(0, 1).toUpperCase()}</div><div><strong>{session.user.name}</strong><small>{session.user.role}</small></div><button className="icon-button" aria-label="Sign out" onClick={() => setShowLogoutDialog(true)}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg></button></div>
+      <div className="account-block"><div className="avatar">{session.user.name.slice(0, 1).toUpperCase()}</div><div><strong>{session.user.name}</strong><small>{session.user.role}</small></div><button className="icon-button tooltip-above" data-tooltip="Sign out" aria-label="Sign out" onClick={() => setShowLogoutDialog(true)}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg></button></div>
     </aside>
     <ConfirmDialog open={showLogoutDialog} title="Sign out?" message="You will need to sign in again to access your workspace." confirmLabel="Sign out" onConfirm={signOut} onCancel={() => setShowLogoutDialog(false)} />
     <main className="app-main"><div className="app-topbar"><ThemeToggle /></div>{children}</main>

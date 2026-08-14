@@ -9,9 +9,11 @@ describe('ThemeToggle', () => {
   it('starts in light mode and switches the document theme attribute', () => {
     render(<ThemeToggle />);
     const button = screen.getByRole('button', { name: 'Switch to dark mode' });
+    expect(button).toHaveAttribute('data-tooltip', 'Switch to dark mode');
     fireEvent.click(button);
     expect(document.documentElement).toHaveAttribute('data-theme', 'dark');
     expect(localStorage.getItem('reservewise.theme')).toBe('dark');
+    expect(screen.getByRole('button', { name: 'Switch to light mode' })).toHaveAttribute('data-tooltip', 'Switch to light mode');
 
     fireEvent.click(screen.getByRole('button', { name: 'Switch to light mode' }));
     expect(document.documentElement).toHaveAttribute('data-theme', 'light');

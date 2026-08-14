@@ -89,21 +89,22 @@ export function CustomerWishlist() {
   return <>
     <PageHeader eyebrow="Your saved products" title="Wishlist" detail="Saved products are not reserved — inventory is only held when you reserve. Availability below is live." />
 
-    {data.items.length ? <div className="reservation-list">{data.items.map(({ product, addedAt }) => {
+    {data.items.length ? <div className="product-grid">{data.items.map(({ product, addedAt }) => {
       const available = product.isActive ? product.available : 0;
       const quantity = quantities[product._id] ?? 0;
-      return <article className="reservation-row" key={product._id}>
-        <ProductImage product={product} className="wishlist-thumb" />
-        <div className="reservation-primary">
-          <div className="reservation-title"><strong>{product.name}</strong><span className={available ? 'stock-live' : 'stock-empty'}>{available ? `${available} available` : 'Unavailable'}</span></div>
-          <span>{product.sku}{categoryLabel(product.category) ? ` · ${categoryLabel(product.category)}` : ''} · {money(product.priceCents)}</span>
-          <small>Saved {new Date(addedAt).toLocaleString()}</small>
+      return <article className="product-card" key={product._id}>
+        <ProductImage product={product} />
+        <div className="product-card-top">
+          <span className="sku">{product.sku}</span>
+          <button className="wishlist-button saved" aria-pressed="true" aria-label={`Remove ${product.name} from wishlist`} disabled={actionId === product._id} onClick={() => remove(product)}>♥</button>
+          <span className={available ? 'stock-live' : 'stock-empty'}>{available ? `${available} available` : 'Out of stock'}</span>
         </div>
-        <div className="row-actions">
-          <div className="stepper"><button disabled={!quantity} onClick={() => setQuantity(product, quantity - 1)} aria-label={`Remove one ${product.name}`}>−</button><span>{quantity}</span><button disabled={!available || quantity >= available} onClick={() => setQuantity(product, quantity + 1)} aria-label={`Add one ${product.name}`}>+</button></div>
-          <button className="button button-primary" disabled={actionId === product._id || !quantity} onClick={() => reserve(product)}>{actionId === product._id && quantity ? 'Securing…' : 'Reserve'}</button>
-          <button className="button button-secondary" disabled={actionId === product._id} onClick={() => remove(product)}>Remove</button>
-        </div>
+        {categoryLabel(product.category) && <p className="product-category">{categoryLabel(product.category)}</p>}
+        <h2>{product.name}</h2>
+        <p>{product.description || 'No description provided.'}</p>
+        <small className="wishlist-saved">Saved {new Date(addedAt).toLocaleString()}</small>
+        <div className="product-card-footer"><strong>{money(product.priceCents)}</strong><div className="stepper"><button disabled={!quantity} onClick={() => setQuantity(product, quantity - 1)} aria-label={`Remove one ${product.name}`}>−</button><span>{quantity}</span><button disabled={!available || quantity >= available} onClick={() => setQuantity(product, quantity + 1)} aria-label={`Add one ${product.name}`}>+</button></div></div>
+        <button className="button button-primary wishlist-reserve" disabled={actionId === product._id || !quantity} onClick={() => reserve(product)}>{actionId === product._id && quantity ? 'Securing…' : 'Reserve'}</button>
       </article>;
     })}</div> : <EmptyState title="Nothing saved yet" detail="Add products from the catalog and reserve them here when you are ready." />}
     <Pagination pagination={pagination} onChange={setPage} onLimitChange={(next) => { setPage(1); setLimit(next); }} label="products" /></>;

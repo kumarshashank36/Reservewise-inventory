@@ -62,7 +62,7 @@ describe('CustomerWishlist', () => {
     api.wishlist.mockResolvedValue({ payload: { items: [item({ product: { ...item().product, available: 0 } })] } });
     renderWishlist();
 
-    await screen.findByText('Unavailable');
+    await screen.findByText('Out of stock');
     expect(screen.getByRole('button', { name: 'Add one Desk Lamp' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Reserve' })).toBeDisabled();
   });
@@ -85,7 +85,7 @@ describe('CustomerWishlist', () => {
     renderWishlist();
 
     await screen.findByText('Desk Lamp');
-    fireEvent.click(screen.getByRole('button', { name: 'Remove' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Remove Desk Lamp from wishlist' }));
 
     await waitFor(() => expect(api.removeWishlistItem).toHaveBeenCalledWith('customer-token', 'p1'));
     expect(api.createReservation).not.toHaveBeenCalled();
