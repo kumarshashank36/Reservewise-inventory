@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useWishlist } from '../context/WishlistContext.jsx';
+import { useReservationCount } from '../context/ReservationCountContext.jsx';
 import { useSnackbar } from '../context/SnackbarContext.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/AsyncState.jsx';
 import { PageHeader } from '../components/AppShell.jsx';
@@ -20,6 +21,7 @@ export function CustomerWishlist() {
   const [quantities, setQuantities] = useState({});
   const [actionId, setActionId] = useState(null);
   const { showSnackbar } = useSnackbar();
+  const { refresh: refreshPendingCount } = useReservationCount();
   const idempotencyKeys = useRef({});
 
   const refresh = useCallback(async ({ silent = false } = {}) => {
@@ -67,6 +69,7 @@ export function CustomerWishlist() {
       setQuantities((current) => { const next = { ...current }; delete next[product._id]; return next; });
       const minutes = heldMinutes(payload.reservation);
       showSnackbar({ kind: 'success', text: `${product.name} is held for ${minutes} minute${minutes === 1 ? '' : 's'}. Review it under My reservations.` });
+      refreshPendingCount();
       await refresh({ silent: true });
     } catch (error) {
       showSnackbar({ kind: 'error', text: error.message });
@@ -77,6 +80,7 @@ export function CustomerWishlist() {
     setActionId(product._id);
     try {
       await toggle(product._id);
+      showSnackbar({ kind: 'success', text: `${product.name} removed from your wishlist` });
       await refresh({ silent: true });
     } catch (error) {
       showSnackbar({ kind: 'error', text: error.message });
@@ -95,7 +99,7 @@ export function CustomerWishlist() {
         <ProductImage product={product} />
         <div className="product-card-top">
           <span className="sku">{product.sku}</span>
-          <button className="wishlist-button saved" aria-pressed="true" aria-label={`Remove ${product.name} from wishlist`} disabled={actionId === product._id} onClick={() => remove(product)}>♥</button>
+          <button className="wishlist-button saved" data-tooltip="Remove from wishlist" aria-pressed="true" aria-label={`Remove ${product.name} from wishlist`} disabled={actionId === product._id} onClick={() => remove(product)}>♥</button>
           <span className={available ? 'stock-live' : 'stock-empty'}>{available ? `${available} available` : 'Out of stock'}</span>
         </div>
         {categoryLabel(product.category) && <p className="product-category">{categoryLabel(product.category)}</p>}

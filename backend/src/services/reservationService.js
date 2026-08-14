@@ -97,7 +97,7 @@ export async function createReservation({ customerId, items, idempotencyKey }) {
           { session }
         );
         if (increment.modifiedCount !== 1) throw new AppError(409, 'INSUFFICIENT_INVENTORY', `${product.name} no longer has enough available inventory`);
-        snapshots.push({ productId: product._id, sku: product.sku, name: product.name, quantity: item.quantity, priceCents: product.priceCents });
+        snapshots.push({ productId: product._id, sku: product.sku, name: product.name, quantity: item.quantity, priceCents: product.priceCents, imageUrl: product.imageUrl ?? '', category: product.category ?? 'misc' });
       }
 
       const [reservation] = await Reservation.create([{ customerId, items: snapshots, idempotencyKey, expiresAt }], { session });
@@ -113,8 +113,9 @@ export async function createReservation({ customerId, items, idempotencyKey }) {
   }
 }
 
-export async function listCustomerReservations(customerId, { page, limit }) {
+export async function listCustomerReservations(customerId, { page, limit, status }) {
   const filter = { customerId };
+  if (status) filter.status = status;
   const [reservations, total] = await Promise.all([
     Reservation.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
     Reservation.countDocuments(filter)

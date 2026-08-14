@@ -90,6 +90,7 @@ describe('CustomerWishlist', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Remove Desk Lamp from wishlist' }));
 
     await waitFor(() => expect(api.removeWishlistItem).toHaveBeenCalledWith('customer-token', 'p1'));
+    await screen.findByText('Desk Lamp removed from your wishlist');
     expect(api.createReservation).not.toHaveBeenCalled();
   });
 

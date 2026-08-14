@@ -100,12 +100,15 @@ describe('AdminInventory', () => {
 
 describe('AdminReservations', () => {
   it('renders the audit view with customer identity and item snapshots', async () => {
-    api.adminReservations.mockResolvedValue({ payload: { reservations: [{ _id: 'abcdef123456', status: 'pending', customerId: { name: 'Jamie', email: 'jamie@example.com' }, items: [{ sku: 'LAMP-01', quantity: 2, name: 'Desk Lamp' }], createdAt: new Date().toISOString() }] } });
+    api.adminReservations.mockResolvedValue({ payload: { reservations: [{ _id: 'abcdef123456', status: 'pending', customerId: { name: 'Jamie', email: 'jamie@example.com' }, items: [{ productId: 'p1', sku: 'LAMP-01', quantity: 2, name: 'Desk Lamp', imageUrl: 'https://example.com/lamp.jpg', category: 'home' }], createdAt: new Date().toISOString() }] } });
     renderWithAuth(<AdminReservations />);
 
     await screen.findByText(/Jamie/);
     expect(screen.getByText(/jamie@example.com/)).toBeInTheDocument();
-    expect(screen.getByText('LAMP-01 × 2')).toBeInTheDocument();
+    expect(screen.getByText('LAMP-01')).toBeInTheDocument();
+    expect(screen.getByText('× 2')).toBeInTheDocument();
+    // The snapshot's image renders as a thumbnail on the row.
+    expect(screen.getByRole('img', { name: 'Desk Lamp' })).toHaveAttribute('src', 'https://example.com/lamp.jpg');
   });
 });
 

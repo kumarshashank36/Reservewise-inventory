@@ -3,6 +3,7 @@ import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { SnackbarProvider } from './context/SnackbarContext.jsx';
 import { WishlistProvider } from './context/WishlistContext.jsx';
+import { ReservationCountProvider } from './context/ReservationCountContext.jsx';
 import { AppShell } from './components/AppShell.jsx';
 import { LoadingState } from './components/AsyncState.jsx';
 import { ThemeToggle } from './components/ThemeToggle.jsx';
@@ -56,15 +57,20 @@ function Protected({ role, children }) {
   if (loading) return <main className="placeholder-page">Restoring your workspace…</main>;
   if (!session) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   if (role && session.user.role !== role) return <Navigate to={session.user.role === 'admin' ? '/admin' : '/app'} replace />;
-  return <AppShell>{children}</AppShell>;
+  return children;
 }
 
-// One shared layout for the whole customer area: the WishlistProvider (and the shell)
-// stay mounted across Catalog / Wishlist / My reservations navigation, so wishlist
-// membership toggled on one page is immediately reflected on the others. The lazy
-// pages suspend inside the shell so the sidebar stays visible while chunks load.
+// One shared layout for the whole customer area: the wishlist and reservation-count
+// providers (and the shell) stay mounted across Catalog / Wishlist / My reservations
+// navigation, so membership toggled on one page — and the sidebar badges — are
+// immediately reflected everywhere. The lazy pages suspend inside the shell so the
+// sidebar stays visible while chunks load.
 function CustomerLayout() {
-  return <Protected role="customer"><WishlistProvider><Suspense fallback={<LoadingState label="Loading workspace" />}><Outlet /></Suspense></WishlistProvider></Protected>;
+  return <Protected role="customer"><WishlistProvider><ReservationCountProvider><AppShell><Suspense fallback={<LoadingState label="Loading workspace" />}><Outlet /></Suspense></AppShell></ReservationCountProvider></WishlistProvider></Protected>;
+}
+
+function AdminLayout() {
+  return <Protected role="admin"><AppShell><Suspense fallback={<LoadingState label="Loading workspace" />}><Outlet /></Suspense></AppShell></Protected>;
 }
 
 export default function App() {
@@ -72,7 +78,7 @@ export default function App() {
     <AuthProvider><SnackbarProvider><Routes>
       <Route path="/" element={<LandingPage />} /><Route path="/login" element={<Suspense fallback={<AuthFallback />}><AuthPage mode="login" /></Suspense>} /><Route path="/register" element={<Suspense fallback={<AuthFallback />}><AuthPage mode="register" /></Suspense>} />
       <Route path="/app" element={<CustomerLayout />}><Route index element={<CustomerCatalog />} /><Route path="wishlist" element={<CustomerWishlist />} /><Route path="reservations" element={<CustomerReservations />} /></Route>
-      <Route path="/admin" element={<Protected role="admin"><Suspense fallback={<LoadingState label="Loading inventory" />}><AdminInventory /></Suspense></Protected>} /><Route path="/admin/reservations" element={<Protected role="admin"><Suspense fallback={<LoadingState label="Loading reservations" />}><AdminReservations /></Suspense></Protected>} /><Route path="/admin/users" element={<Protected role="admin"><Suspense fallback={<LoadingState label="Loading team" />}><AdminUsers /></Suspense></Protected>} />
+      <Route path="/admin" element={<AdminLayout />}><Route index element={<AdminInventory />} /><Route path="reservations" element={<AdminReservations />} /><Route path="users" element={<AdminUsers />} /></Route>
       <Route path="*" element={<LandingPage />} />
     </Routes></SnackbarProvider></AuthProvider>
   );

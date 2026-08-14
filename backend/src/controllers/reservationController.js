@@ -24,7 +24,8 @@ export async function create(req, res) {
 
 export async function listMine(req, res) {
   const { page, limit } = parsePagination(req.query);
-  const { reservations, total } = await listCustomerReservations(req.user.id, { page, limit });
+  const { status } = customerReservationQuery.parse(req.query);
+  const { reservations, total } = await listCustomerReservations(req.user.id, { page, limit, status });
   res.json({ reservations, pagination: paginationMeta(page, limit, total) });
 }
 
@@ -39,6 +40,10 @@ export async function cancel(req, res) {
 export async function complete(req, res) {
   res.json({ reservation: await completeReservation(req.user.id, req.params.reservationId) });
 }
+
+const customerReservationQuery = z.object({
+  status: z.enum(['pending', 'completed', 'cancelled', 'expired']).optional()
+});
 
 const adminReservationQuery = z.object({
   status: z.enum(['pending', 'completed', 'cancelled', 'expired']).optional(),

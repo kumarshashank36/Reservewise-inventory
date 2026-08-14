@@ -109,6 +109,10 @@ describe('reservation API', () => {
     expect(response.status).toBe(201);
     expect(response.body.reservation.items).toHaveLength(1);
     expect(response.body.reservation.items[0].quantity).toBe(3);
+    // Display fields are snapshotted so reservation rows render artwork without
+    // joining the products collection.
+    expect(response.body.reservation.items[0].imageUrl).toBe(product.imageUrl);
+    expect(response.body.reservation.items[0].category).toBe(product.category);
     expect((await Product.findById(product._id)).reserved).toBe(3);
   });
 
@@ -234,5 +238,26 @@ describe('reservation API', () => {
     expect(successful.length).toBeLessThanOrEqual(3);
     expect(stored.reserved).toBe(successful.length);
     expect(stored.reserved).toBeLessThanOrEqual(stored.onHand);
+  });
+
+  it('filters the customer reservation list by status', async () => {
+    const product = await createProduct({ sku: 'FILTER-01', name: 'Filterable Item', onHand: 5 });
+    const customer = await register('filter-owner@example.com');
+    const created = await reserve(customer, [{ productId: product._id, quantity: 1 }], 'filter-key-001');
+    expect(created.status).toBe(201);
+
+    const pending = await request(app).get('/api/v1/reservations?status=pending').set('Authorization', `Bearer ${customer}`);
+    expect(pending.status).toBe(200);
+    expect(pending.body.pagination.total).toBe(1);
+    expect(pending.body.reservations[0].status).toBe('pending');
+
+    await request(app).post(`/api/v1/reservations/${created.body.reservation._id}/complete`).set('Authorization', `Bearer ${customer}`).expect(200);
+
+    const completed = await request(app).get('/api/v1/reservations?status=completed').set('Authorization', `Bearer ${customer}`);
+    expect(completed.body.pagination.total).toBe(1);
+    expect(completed.body.reservations[0].status).toBe('completed');
+
+    const nonePending = await request(app).get('/api/v1/reservations?status=pending').set('Authorization', `Bearer ${customer}`);
+    expect(nonePending.body.pagination.total).toBe(0);
   });
 });

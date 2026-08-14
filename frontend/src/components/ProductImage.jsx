@@ -9,13 +9,24 @@ const FALLBACK_GRADIENTS = {
   stationery: ['#8a5a1e', '#c9a25e']
 };
 
+// Pictogram shown instead of a letter tile when no artwork exists or it fails.
+const FALLBACK_ICONS = {
+  electronics: '🎧', furniture: '🛋️', clothing: '👕', home: '🏠', stationery: '✒️', misc: '📦'
+};
+
 // Renders the product image; if none is set or it fails to load, shows a
-// design-native per-category gradient tile instead, so cards never break.
-export function ProductImage({ product, className = '' }) {
+// design-native per-category gradient tile with a category pictogram instead,
+// so cards never break and never show bare initials. Thumbnail contexts ask
+// Unsplash for a 240px variant so rows don't download full-size photos.
+export function ProductImage({ product, className = '', thumbnail = false }) {
   const [failed, setFailed] = useState(false);
   if (!product.imageUrl || failed) {
     const [from, to] = FALLBACK_GRADIENTS[product.category] ?? FALLBACK_GRADIENTS.home;
-    return <div className={`product-image product-image-fallback ${className}`} style={{ background: `linear-gradient(135deg, ${from}, ${to})` }} role="img" aria-label={`${product.name} — ${categoryLabel(product.category) || 'Product'} artwork`}><span>{product.name.charAt(0).toUpperCase()}</span></div>;
+    return <div className={`product-image product-image-fallback ${className}`} style={{ background: `linear-gradient(135deg, ${from}, ${to})` }} role="img" aria-label={`${product.name} — ${categoryLabel(product.category) || 'Product'} artwork`}><span>{FALLBACK_ICONS[product.category] ?? FALLBACK_ICONS.misc}</span></div>;
   }
-  return <img className={`product-image ${className}`} src={product.imageUrl} alt={product.name} loading="lazy" onError={() => setFailed(true)} />;
+  let src = product.imageUrl;
+  if (thumbnail && src.includes('images.unsplash.com')) {
+    try { const url = new URL(src); url.searchParams.set('w', '240'); src = url.toString(); } catch { /* keep the original on malformed URLs */ }
+  }
+  return <img className={`product-image ${className}`} src={src} alt={product.name} loading="lazy" onError={() => setFailed(true)} />;
 }

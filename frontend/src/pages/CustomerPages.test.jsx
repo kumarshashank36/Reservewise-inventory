@@ -101,23 +101,27 @@ describe('CustomerCatalog', () => {
     expect(api.createReservation.mock.calls[0][2]).toBe(api.createReservation.mock.calls[1][2]);
   });
 
-  it('toggles wishlist membership from the product card', async () => {
+  it('toggles wishlist membership from the product card with snackbar feedback', async () => {
     api.products.mockResolvedValue({ payload: { products: [product()] } });
     api.addWishlistItem.mockResolvedValue({ payload: { item: { productId: 'p1' } } });
     renderWithAuth(<CustomerCatalog />);
     await screen.findByText('Desk Lamp');
 
     const addButton = screen.getByRole('button', { name: 'Add Desk Lamp to wishlist' });
+    expect(addButton).toHaveAttribute('data-tooltip', 'Add to wishlist');
     expect(addButton).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(addButton);
 
     await waitFor(() => expect(api.addWishlistItem).toHaveBeenCalledWith('customer-token', 'p1'));
+    await screen.findByText('Desk Lamp added to your wishlist');
     const removeButton = screen.getByRole('button', { name: 'Remove Desk Lamp from wishlist' });
+    expect(removeButton).toHaveAttribute('data-tooltip', 'Remove from wishlist');
     expect(removeButton).toHaveAttribute('aria-pressed', 'true');
 
     api.removeWishlistItem.mockResolvedValue({ payload: { removed: true } });
     fireEvent.click(removeButton);
     await waitFor(() => expect(api.removeWishlistItem).toHaveBeenCalledWith('customer-token', 'p1'));
+    await screen.findByText('Desk Lamp removed from your wishlist');
     expect(screen.getByRole('button', { name: 'Add Desk Lamp to wishlist' })).toHaveAttribute('aria-pressed', 'false');
   });
 
