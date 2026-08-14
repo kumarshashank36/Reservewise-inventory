@@ -96,7 +96,7 @@ export function CustomerWishlist() {
       const available = product.isActive ? product.available : 0;
       const quantity = quantities[product._id] ?? 0;
       return <article className="product-card" key={product._id}>
-        <ProductImage product={product} />
+        <ProductImage product={product} size={640} />
         <div className="product-card-top">
           <span className="sku">{product.sku}</span>
           <button className="wishlist-button saved" data-tooltip="Remove from wishlist" aria-pressed="true" aria-label={`Remove ${product.name} from wishlist`} disabled={actionId === product._id} onClick={() => remove(product)}>♥</button>
