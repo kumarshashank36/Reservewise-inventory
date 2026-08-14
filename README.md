@@ -2,6 +2,10 @@
 
 Reservewise is a MERN inventory reservation application built for the Entermind technical assessment. Customers can browse active products, place ten-minute multi-product holds, and complete or cancel their own reservations. Administrators can safely manage inventory and review reservation activity.
 
+## Demo
+
+Watch a walkthrough of the app: [demo video](https://drive.google.com/file/d/1QubEMrHFyyzzthpRwK-D24U_pqKnIxS1/view?usp=sharing)
+
 ## Architecture
 
 ```text
