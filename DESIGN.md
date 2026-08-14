@@ -132,6 +132,8 @@ List endpoints accept `?page=1&limit=20` (page ≥ 1, limit 1–100) and return 
 
 Search, filter, and sort compose with pagination on the same endpoints: the catalog accepts `?search=` (name/SKU, case-insensitive), `?category=`, and `?sort=name|price-asc|price-desc`; admin products add `?active=true|false` and an `updatedAt-desc` sort; admin reservations accept `?status=pending|completed|cancelled|expired`, `?search=` on item SKU/name, and `?sort=createdAt-desc|createdAt-asc`.
 
+The client mirrors these as **browser URL query parameters**, so filtered views are shareable and work with back/forward navigation. Search input is debounced (400ms) before it becomes a `?q=` parameter, and every request carries a sequence guard so out-of-order responses can never overwrite newer results. Supporting indexes back each filter/sort path: `{isActive, category, name}`, `{isActive, priceCents, name}`, `{category, isActive, updatedAt}`, `{updatedAt}` on products; `{status, createdAt}` on reservations; `{customerId, createdAt}` on wishlist items.
+
 | Area | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
 | Health | `GET /health` | public | liveness/readiness check |

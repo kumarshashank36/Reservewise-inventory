@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext } from '../context/AuthContext.jsx';
 import { WishlistProvider } from '../context/WishlistContext.jsx';
@@ -21,7 +22,7 @@ const customerAuth = {
 };
 
 function renderWithAuth(children) {
-  return render(<AuthContext.Provider value={customerAuth}><WishlistProvider>{children}</WishlistProvider></AuthContext.Provider>);
+  return render(<AuthContext.Provider value={customerAuth}><MemoryRouter><WishlistProvider>{children}</WishlistProvider></MemoryRouter></AuthContext.Provider>);
 }
 
 const product = (overrides = {}) => ({ _id: 'p1', sku: 'LAMP-01', name: 'Desk Lamp', description: 'Bright', priceCents: 5900, onHand: 3, reserved: 0, available: 3, isActive: true, ...overrides });
@@ -223,6 +224,40 @@ describe('CustomerCatalog', () => {
     expect(screen.getAllByRole('img', { name: 'Desk Lamp' })).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Add one Desk Lamp' }));
     expect(screen.getAllByRole('img', { name: 'Desk Lamp' })).toHaveLength(2);
+  });
+
+  it('debounces catalog search so typing fires a single query', async () => {
+    api.products.mockResolvedValue({ payload: { products: [product()], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    renderWithAuth(<CustomerCatalog />);
+
+    await screen.findByText('Desk Lamp');
+    const searchInput = screen.getByRole('searchbox', { name: 'Search products' });
+    fireEvent.change(searchInput, { target: { value: 'la' } });
+    fireEvent.change(searchInput, { target: { value: 'lam' } });
+    fireEvent.change(searchInput, { target: { value: 'lamp' } });
+
+    // Let the debounce window elapse: exactly one search request goes out.
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', expect.objectContaining({ search: 'lamp', page: 1 })));
+    expect(api.products.mock.calls.filter(([, params]) => params.search)).toHaveLength(1);
+  });
+
+  it('keeps search focus through a search-triggered reload so typing can continue', async () => {
+    api.products.mockResolvedValue({ payload: { products: [product()], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    renderWithAuth(<CustomerCatalog />);
+
+    await screen.findByText('Desk Lamp');
+    const searchInput = screen.getByRole('searchbox', { name: 'Search products' });
+    searchInput.focus();
+    fireEvent.change(searchInput, { target: { value: 'lamp' } });
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', expect.objectContaining({ search: 'lamp' })));
+
+    // The toolbar survived the reload: the input still has focus and accepts more typing.
+    expect(screen.getByRole('searchbox', { name: 'Search products' })).toHaveFocus();
+    fireEvent.change(screen.getByRole('searchbox', { name: 'Search products' }), { target: { value: 'lamp shade' } });
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', expect.objectContaining({ search: 'lamp shade' })));
   });
 
   it('searches and sorts the catalog', async () => {

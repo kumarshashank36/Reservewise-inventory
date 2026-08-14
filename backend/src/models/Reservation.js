@@ -29,5 +29,7 @@ reservationSchema.index({ customerId: 1, idempotencyKey: 1 }, { unique: true });
 reservationSchema.index({ customerId: 1, createdAt: -1 });
 reservationSchema.index({ status: 1, expiresAt: 1 });
 reservationSchema.index({ 'items.productId': 1 });
+// Supports the admin audit's status filter + createdAt sort.
+reservationSchema.index({ status: 1, createdAt: -1 });
 
 export const Reservation = mongoose.model('Reservation', reservationSchema);

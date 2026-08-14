@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext } from '../context/AuthContext.jsx';
 import { ApiError, api } from '../services/api.js';
@@ -20,7 +21,7 @@ const adminAuth = {
 };
 
 function renderWithAuth(children) {
-  return render(<AuthContext.Provider value={adminAuth}>{children}</AuthContext.Provider>);
+  return render(<AuthContext.Provider value={adminAuth}><MemoryRouter>{children}</MemoryRouter></AuthContext.Provider>);
 }
 
 const product = (overrides = {}) => ({ _id: 'p1', sku: 'LAMP-01', name: 'Desk Lamp', priceCents: 5900, onHand: 3, reserved: 0, available: 3, isActive: true, ...overrides });

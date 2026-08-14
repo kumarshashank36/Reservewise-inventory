@@ -17,6 +17,10 @@ const productSchema = new mongoose.Schema(
 );
 
 productSchema.index({ isActive: 1, category: 1, name: 1 });
+// Support the price sorts and the admin inventory filter/sort combinations.
+productSchema.index({ isActive: 1, priceCents: 1, name: 1 });
+productSchema.index({ category: 1, isActive: 1, updatedAt: -1 });
+productSchema.index({ updatedAt: -1 });
 
 productSchema.virtual('available').get(function getAvailable() {
   return this.onHand - this.reserved;

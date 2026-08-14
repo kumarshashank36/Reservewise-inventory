@@ -190,8 +190,8 @@ HOLD_MINUTES=1 npm run verify:ui
 
 ### 23. Search, filter, and sort
 
-1. On the Catalog, type **"lamp"** in the search box and press Enter.
-2. **Expected:** only products whose name or SKU matches appear (case-insensitive); the pager reflects the filtered total. Clearing the search and pressing Enter restores the full list.
+1. On the Catalog, type **"lamp"** in the search box.
+2. **Expected:** the list filters live after a short typing pause (~400ms debounce — no request per keystroke), matching name or SKU case-insensitively; the pager reflects the filtered total. Clearing the search restores the full list. The URL shows `?q=lamp&…` and the browser Back button steps through previous filters.
 3. Use the **Sort** dropdown: **Name A–Z**, **Price: low to high**, **Price: high to low**.
 4. **Expected:** the grid reorders accordingly, always resetting to page 1.
 5. On admin **Inventory**, the toolbar offers search (name/SKU), **category**, **Active/Inactive**, and sort (**Recently updated / Name / Price**).
