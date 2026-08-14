@@ -1,20 +1,46 @@
 import { AppError } from '../errors/AppError.js';
 import { Product } from '../models/Product.js';
+import { escapeRegex } from './listQuery.js';
 
-export async function listCatalogProducts({ page, limit, category }) {
+const CATALOG_SORTS = {
+  name: { name: 1 },
+  'price-asc': { priceCents: 1, name: 1 },
+  'price-desc': { priceCents: -1, name: 1 }
+};
+
+const ADMIN_SORTS = {
+  'updatedAt-desc': { updatedAt: -1 },
+  name: { name: 1 },
+  'price-asc': { priceCents: 1, name: 1 },
+  'price-desc': { priceCents: -1, name: 1 }
+};
+
+function withSearch(filter, search, fields) {
+  const regex = new RegExp(escapeRegex(search), 'i');
+  filter.$or = fields.map((field) => ({ [field]: regex }));
+}
+
+export async function listCatalogProducts({ page, limit, category, search, sort }) {
   const filter = { isActive: true };
   if (category) filter.category = category;
+  if (search) withSearch(filter, search, ['name', 'sku']);
+  const sortOption = CATALOG_SORTS[sort] ?? CATALOG_SORTS.name;
   const [products, total] = await Promise.all([
-    Product.find(filter).sort({ name: 1 }).skip((page - 1) * limit).limit(limit),
+    Product.find(filter).sort(sortOption).skip((page - 1) * limit).limit(limit),
     Product.countDocuments(filter)
   ]);
   return { products, total };
 }
 
-export async function listAdminProducts({ page, limit }) {
+export async function listAdminProducts({ page, limit, category, search, sort, active }) {
+  const filter = {};
+  if (category) filter.category = category;
+  if (search) withSearch(filter, search, ['name', 'sku']);
+  if (active !== undefined) filter.isActive = active;
+  const sortOption = ADMIN_SORTS[sort] ?? ADMIN_SORTS['updatedAt-desc'];
   const [products, total] = await Promise.all([
-    Product.find().sort({ updatedAt: -1 }).skip((page - 1) * limit).limit(limit),
-    Product.countDocuments()
+    Product.find(filter).sort(sortOption).skip((page - 1) * limit).limit(limit),
+    Product.countDocuments(filter)
   ]);
   return { products, total };
 }

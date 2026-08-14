@@ -3,6 +3,7 @@ import { env } from '../config/env.js';
 import { AppError } from '../errors/AppError.js';
 import { Product } from '../models/Product.js';
 import { Reservation } from '../models/Reservation.js';
+import { escapeRegex } from './listQuery.js';
 import { runTransaction } from './transaction.js';
 
 const HOLD_DURATION_MS = env.HOLD_MINUTES * 60 * 1000;
@@ -127,10 +128,17 @@ export async function getCustomerReservation(customerId, reservationId) {
   return reservation;
 }
 
-export async function listAdminReservations({ page, limit }) {
+export async function listAdminReservations({ page, limit, status, search, sort }) {
+  const filter = {};
+  if (status) filter.status = status;
+  if (search) {
+    const regex = new RegExp(escapeRegex(search), 'i');
+    filter.$or = [{ 'items.sku': regex }, { 'items.name': regex }];
+  }
+  const sortOption = sort === 'createdAt-asc' ? { createdAt: 1 } : { createdAt: -1 };
   const [reservations, total] = await Promise.all([
-    Reservation.find().populate('customerId', 'name email').sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
-    Reservation.countDocuments()
+    Reservation.find(filter).populate('customerId', 'name email').sort(sortOption).skip((page - 1) * limit).limit(limit),
+    Reservation.countDocuments(filter)
   ]);
   return { reservations, total };
 }

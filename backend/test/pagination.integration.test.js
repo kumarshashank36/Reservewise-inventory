@@ -151,4 +151,74 @@ describe('list endpoint pagination', () => {
     expect(unknown.status).toBe(400);
     expect(unknown.body.error.code).toBe('VALIDATION_ERROR');
   });
+
+  it('searches and sorts the customer catalog', async () => {
+    await Product.insertMany([
+      { sku: 'SEARCH-A', name: 'Zephyr Speaker', priceCents: 9000, onHand: 1, reserved: 0, isActive: true, category: 'electronics' },
+      { sku: 'SEARCH-B', name: 'Amber Desk Lamp', priceCents: 3000, onHand: 1, reserved: 0, isActive: true, category: 'home' },
+      { sku: 'SEARCH-C', name: 'Lamp Repair Kit', priceCents: 1500, onHand: 1, reserved: 0, isActive: true, category: 'stationery' }
+    ]);
+
+    // Case-insensitive substring match on name or SKU.
+    const byName = await request(app).get('/api/v1/products?search=lamp').set('Authorization', `Bearer ${customerToken}`);
+    expect(byName.body.products.map((product) => product.sku).sort()).toEqual(['SEARCH-B', 'SEARCH-C']);
+
+    const bySku = await request(app).get('/api/v1/products?search=SEARCH-A').set('Authorization', `Bearer ${customerToken}`);
+    expect(bySku.body.products.map((product) => product.sku)).toEqual(['SEARCH-A']);
+
+    // Search composes with pagination metadata.
+    expect(byName.body.pagination.total).toBe(2);
+
+    const ascending = await request(app).get('/api/v1/products?sort=price-asc').set('Authorization', `Bearer ${customerToken}`);
+    expect(ascending.body.products.map((product) => product.priceCents)).toEqual([1500, 3000, 9000]);
+
+    const descending = await request(app).get('/api/v1/products?sort=price-desc').set('Authorization', `Bearer ${customerToken}`);
+    expect(descending.body.products[0].priceCents).toBe(9000);
+
+    const invalidSort = await request(app).get('/api/v1/products?sort=newest').set('Authorization', `Bearer ${customerToken}`);
+    expect(invalidSort.status).toBe(400);
+  });
+
+  it('filters and sorts the admin inventory', async () => {
+    await Product.insertMany([
+      { sku: 'ADM-1', name: 'Active Desk', priceCents: 5000, onHand: 1, reserved: 0, isActive: true, category: 'furniture' },
+      { sku: 'ADM-2', name: 'Hidden Shelf', priceCents: 2000, onHand: 1, reserved: 0, isActive: false, category: 'furniture' },
+      { sku: 'ADM-3', name: 'Visible Lamp', priceCents: 8000, onHand: 1, reserved: 0, isActive: true, category: 'home' }
+    ]);
+
+    const activeOnly = await request(app).get('/api/v1/admin/products?active=true').set('Authorization', `Bearer ${adminToken}`);
+    expect(activeOnly.body.products.map((product) => product.sku).sort()).toEqual(['ADM-1', 'ADM-3']);
+
+    const furnitureOnly = await request(app).get('/api/v1/admin/products?category=furniture&active=false').set('Authorization', `Bearer ${adminToken}`);
+    expect(furnitureOnly.body.products.map((product) => product.sku)).toEqual(['ADM-2']);
+
+    const searched = await request(app).get('/api/v1/admin/products?search=lamp').set('Authorization', `Bearer ${adminToken}`);
+    expect(searched.body.products.map((product) => product.sku)).toEqual(['ADM-3']);
+
+    const sorted = await request(app).get('/api/v1/admin/products?sort=price-desc').set('Authorization', `Bearer ${adminToken}`);
+    expect(sorted.body.products[0].sku).toBe('ADM-3');
+  });
+
+  it('filters and sorts the admin reservation audit', async () => {
+    const product = await Product.create({ sku: 'RSV-PROD', name: 'Reserved Product', priceCents: 100, onHand: 100, reserved: 0, category: 'home' });
+    const now = new Date();
+    await Reservation.insertMany([
+      { customerId, status: 'pending', items: [{ productId: product._id, sku: 'RSV-PROD', name: 'Reserved Product', quantity: 1, priceCents: 100 }], idempotencyKey: 'filter-key-1', expiresAt: new Date(now.getTime() + 10 * 60_000) },
+      { customerId, status: 'completed', items: [{ productId: product._id, sku: 'OTHER-SKU', name: 'Other Product', quantity: 1, priceCents: 100 }], idempotencyKey: 'filter-key-2', expiresAt: new Date(now.getTime() + 10 * 60_000), completedAt: now },
+      { customerId, status: 'cancelled', items: [{ productId: product._id, sku: 'RSV-PROD', name: 'Reserved Product', quantity: 1, priceCents: 100 }], idempotencyKey: 'filter-key-3', expiresAt: new Date(now.getTime() + 10 * 60_000), cancelledAt: now }
+    ]);
+
+    const pending = await request(app).get('/api/v1/admin/reservations?status=pending').set('Authorization', `Bearer ${adminToken}`);
+    expect(pending.body.reservations).toHaveLength(1);
+    expect(pending.body.reservations[0].status).toBe('pending');
+
+    const bySku = await request(app).get('/api/v1/admin/reservations?search=RSV-PROD').set('Authorization', `Bearer ${adminToken}`);
+    expect(bySku.body.reservations).toHaveLength(2);
+
+    const oldestFirst = await request(app).get('/api/v1/admin/reservations?sort=createdAt-asc').set('Authorization', `Bearer ${adminToken}`);
+    expect(new Date(oldestFirst.body.reservations[0].createdAt).getTime()).toBeLessThanOrEqual(new Date(oldestFirst.body.reservations[2].createdAt).getTime());
+
+    const invalidStatus = await request(app).get('/api/v1/admin/reservations?status=unknown').set('Authorization', `Bearer ${adminToken}`);
+    expect(invalidStatus.status).toBe(400);
+  });
 });

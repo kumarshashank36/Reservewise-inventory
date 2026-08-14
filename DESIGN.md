@@ -130,6 +130,8 @@ All endpoints are prefixed with `/api/v1`. Errors use `{ error: { code, message,
 
 List endpoints accept `?page=1&limit=20` (page ≥ 1, limit 1–100) and return `pagination: { page, limit, total, totalPages }` alongside their data array: catalog, wishlist, customer reservations, admin products, admin reservations, and admin users.
 
+Search, filter, and sort compose with pagination on the same endpoints: the catalog accepts `?search=` (name/SKU, case-insensitive), `?category=`, and `?sort=name|price-asc|price-desc`; admin products add `?active=true|false` and an `updatedAt-desc` sort; admin reservations accept `?status=pending|completed|cancelled|expired`, `?search=` on item SKU/name, and `?sort=createdAt-desc|createdAt-asc`.
+
 | Area | Endpoint | Access | Purpose |
 | --- | --- | --- | --- |
 | Health | `GET /health` | public | liveness/readiness check |

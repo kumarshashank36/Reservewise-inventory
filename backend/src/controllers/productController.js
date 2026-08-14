@@ -27,16 +27,31 @@ const updateSchema = z.object({
   onHand: inventory.optional()
 }).strict().refine((input) => Object.keys(input).length > 0, 'Provide at least one field to update');
 
+const search = z.string().trim().max(100).optional();
+const catalogQuery = z.object({
+  category,
+  search,
+  sort: z.enum(['name', 'price-asc', 'price-desc']).default('name')
+});
+const adminQuery = z.object({
+  category,
+  search,
+  // Enum+transform rather than z.coerce.boolean(): coercion turns the string 'false' into true.
+  active: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
+  sort: z.enum(['updatedAt-desc', 'name', 'price-asc', 'price-desc']).default('updatedAt-desc')
+});
+
 export async function listCatalog(req, res) {
   const { page, limit } = parsePagination(req.query);
-  const selectedCategory = category.parse(req.query.category);
-  const { products, total } = await listCatalogProducts({ page, limit, category: selectedCategory });
+  const { category: selectedCategory, search: searchTerm, sort } = catalogQuery.parse(req.query);
+  const { products, total } = await listCatalogProducts({ page, limit, category: selectedCategory, search: searchTerm, sort });
   res.json({ products, pagination: paginationMeta(page, limit, total) });
 }
 
 export async function listAdmin(req, res) {
   const { page, limit } = parsePagination(req.query);
-  const { products, total } = await listAdminProducts({ page, limit });
+  const { category: selectedCategory, search: searchTerm, sort, active } = adminQuery.parse(req.query);
+  const { products, total } = await listAdminProducts({ page, limit, category: selectedCategory, search: searchTerm, sort, active });
   res.json({ products, pagination: paginationMeta(page, limit, total) });
 }
 

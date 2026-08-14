@@ -40,8 +40,15 @@ export async function complete(req, res) {
   res.json({ reservation: await completeReservation(req.user.id, req.params.reservationId) });
 }
 
+const adminReservationQuery = z.object({
+  status: z.enum(['pending', 'completed', 'cancelled', 'expired']).optional(),
+  search: z.string().trim().max(100).optional(),
+  sort: z.enum(['createdAt-desc', 'createdAt-asc']).default('createdAt-desc')
+});
+
 export async function listAdmin(req, res) {
   const { page, limit } = parsePagination(req.query);
-  const { reservations, total } = await listAdminReservations({ page, limit });
+  const { status, search, sort } = adminReservationQuery.parse(req.query);
+  const { reservations, total } = await listAdminReservations({ page, limit, status, search, sort });
   res.json({ reservations, pagination: paginationMeta(page, limit, total) });
 }

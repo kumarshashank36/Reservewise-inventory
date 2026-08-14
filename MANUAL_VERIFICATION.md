@@ -188,6 +188,17 @@ HOLD_MINUTES=1 npm run verify:ui
 5. **Expected:** it appears under that category chip for customers; a filtered category with no products shows "No products in <category>".
    *Rule: category filtering is server-side (`?category=`), combined with pagination and the active-only catalog.*
 
+### 23. Search, filter, and sort
+
+1. On the Catalog, type **"lamp"** in the search box and press Enter.
+2. **Expected:** only products whose name or SKU matches appear (case-insensitive); the pager reflects the filtered total. Clearing the search and pressing Enter restores the full list.
+3. Use the **Sort** dropdown: **Name A–Z**, **Price: low to high**, **Price: high to low**.
+4. **Expected:** the grid reorders accordingly, always resetting to page 1.
+5. On admin **Inventory**, the toolbar offers search (name/SKU), **category**, **Active/Inactive**, and sort (**Recently updated / Name / Price**).
+6. **Expected:** each control filters server-side and composes with the others and with pagination.
+7. On admin **Reservations**, filter by **status** (Pending/Completed/Cancelled/Expired), search by SKU or item name, and sort **Newest first / Oldest first**.
+   *Rule: search/filter/sort are server-side query parameters composed with pagination.*
+
 ## What is NOT manually verifiable via the UI (by design)
 
 These are the properties the UI cannot easily demonstrate, so they are enforced by automated tests instead (`npm test` — 26 backend, 19 frontend):

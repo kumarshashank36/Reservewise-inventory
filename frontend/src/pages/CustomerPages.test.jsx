@@ -174,7 +174,7 @@ describe('CustomerCatalog', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
     await screen.findByText('Second Lamp');
-    expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 2, limit: 10, category: null });
+    expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 2, limit: 10, category: null, search: null, sort: 'name' });
     expect(screen.getByText(/Page 2 of 2/)).toBeInTheDocument();
   });
 
@@ -197,7 +197,7 @@ describe('CustomerCatalog', () => {
     expect(size).toHaveValue('10');
 
     fireEvent.change(size, { target: { value: '20' } });
-    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 20, category: null }));
+    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 20, category: null, search: null, sort: 'name' }));
   });
 
   it('filters the catalog by category with chips and shows the category on cards', async () => {
@@ -210,7 +210,7 @@ describe('CustomerCatalog', () => {
     expect(within(screen.getByRole('article')).getByText('Electronics')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Furniture' }));
-    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 10, category: 'furniture' }));
+    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 10, category: 'furniture', search: null, sort: 'name' }));
     expect(screen.getByRole('tab', { name: 'Furniture' })).toHaveAttribute('aria-selected', 'true');
   });
 
@@ -223,6 +223,20 @@ describe('CustomerCatalog', () => {
     expect(screen.getAllByRole('img', { name: 'Desk Lamp' })).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Add one Desk Lamp' }));
     expect(screen.getAllByRole('img', { name: 'Desk Lamp' })).toHaveLength(2);
+  });
+
+  it('searches and sorts the catalog', async () => {
+    api.products.mockResolvedValue({ payload: { products: [product()], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    renderWithAuth(<CustomerCatalog />);
+
+    await screen.findByText('Desk Lamp');
+    const searchInput = screen.getByRole('searchbox', { name: 'Search products' });
+    fireEvent.change(searchInput, { target: { value: 'lamp' } });
+    fireEvent.keyDown(searchInput, { key: 'Enter' });
+    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 10, category: null, search: 'lamp', sort: 'name' }));
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Sort products' }), { target: { value: 'price-desc' } });
+    await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 10, category: null, search: 'lamp', sort: 'price-desc' }));
   });
 
   it('renders product images with a graceful category fallback', async () => {

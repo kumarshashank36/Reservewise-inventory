@@ -148,6 +148,9 @@ Admin sign-in: admin@example.com (select the Admin sign-in type) / password from
                  that resets to page 1; empty last pages snap back.
 22. CATEGORIES   Catalog chips filter by category server-side; admin Add product form assigns a category,
                  and category labels show on cards, wishlist rows, and the admin inventory table.
+23. SEARCH/SORT  Catalog: search by name/SKU (Enter) + price/name sort. Admin inventory: search, category,
+                 active/inactive, and sort filters. Admin reservations: status filter, SKU search, and
+                 newest/oldest sort. All compose with pagination.
 
 Fast path for the 10-minute expiry (scenario 9):
   Stop this script (Ctrl+C), then run:  HOLD_MINUTES=1 npm run verify:ui

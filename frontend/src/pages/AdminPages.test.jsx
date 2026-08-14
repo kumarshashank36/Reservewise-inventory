@@ -187,7 +187,7 @@ describe('AdminUsers', () => {
     expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', { page: 2, limit: 10 }));
+    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', { page: 2, limit: 10, category: null, active: null, search: null, sort: 'updatedAt-desc' }));
   });
 
   it('changes the inventory page size and resets to the first page', async () => {
@@ -196,7 +196,22 @@ describe('AdminUsers', () => {
 
     await screen.findByText('Desk Lamp');
     fireEvent.change(screen.getByRole('combobox', { name: 'Items per page' }), { target: { value: '5' } });
-    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', { page: 1, limit: 5 }));
+    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', { page: 1, limit: 5, category: null, active: null, search: null, sort: 'updatedAt-desc' }));
+  });
+
+  it('filters and sorts the inventory toolbar', async () => {
+    api.adminProducts.mockResolvedValue({ payload: { products: [product()], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    renderWithAuth(<AdminInventory />);
+
+    await screen.findByText('Desk Lamp');
+    fireEvent.change(screen.getByRole('combobox', { name: 'Filter category' }), { target: { value: 'furniture' } });
+    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', expect.objectContaining({ category: 'furniture', page: 1 })));
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Filter status' }), { target: { value: 'false' } });
+    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', expect.objectContaining({ active: false })));
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Sort products' }), { target: { value: 'price-asc' } });
+    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', expect.objectContaining({ sort: 'price-asc' })));
   });
 
   it('paginates the reservation audit', async () => {
@@ -205,7 +220,19 @@ describe('AdminUsers', () => {
 
     await screen.findByText(/Jamie/);
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    await waitFor(() => expect(api.adminReservations).toHaveBeenLastCalledWith('admin-token', { page: 2, limit: 10 }));
+    await waitFor(() => expect(api.adminReservations).toHaveBeenLastCalledWith('admin-token', { page: 2, limit: 10, status: null, search: null, sort: 'createdAt-desc' }));
+  });
+
+  it('filters the reservation audit by status and sort', async () => {
+    api.adminReservations.mockResolvedValue({ payload: { reservations: [{ _id: 'abcdef123456', status: 'pending', customerId: { name: 'Jamie', email: 'jamie@example.com' }, items: [{ sku: 'LAMP-01', quantity: 2, name: 'Desk Lamp' }], createdAt: new Date().toISOString() }], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    renderWithAuth(<AdminReservations />);
+
+    await screen.findByText(/Jamie/);
+    fireEvent.change(screen.getByRole('combobox', { name: 'Filter status' }), { target: { value: 'pending' } });
+    await waitFor(() => expect(api.adminReservations).toHaveBeenLastCalledWith('admin-token', expect.objectContaining({ status: 'pending' })));
+
+    fireEvent.change(screen.getByRole('combobox', { name: 'Sort reservations' }), { target: { value: 'createdAt-asc' } });
+    await waitFor(() => expect(api.adminReservations).toHaveBeenLastCalledWith('admin-token', expect.objectContaining({ sort: 'createdAt-asc' })));
   });
 
   it('paginates the team list', async () => {
