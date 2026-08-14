@@ -41,6 +41,19 @@
     color: inherit;
     text-decoration: none;
   }
+  /* Tailwind v4 preflight sets buttons to cursor: default; interactive
+     controls should read as clickable instead. */
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  select:not(:disabled),
+  input[type='submit']:not(:disabled),
+  label {
+    cursor: pointer;
+  }
+  button:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
 }
 
 @layer utilities {
