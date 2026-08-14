@@ -6,7 +6,8 @@ import { User } from '../models/User.js';
 export async function authenticate(req, res, next) {
   try {
     const header = req.headers.authorization;
-    if (!header?.startsWith('Bearer ')) throw new AppError(401, 'AUTHENTICATION_REQUIRED', 'A bearer token is required');
+    if (!header?.startsWith('Bearer '))
+      throw new AppError(401, 'AUTHENTICATION_REQUIRED', 'A bearer token is required');
     if (!env.JWT_SECRET) throw new Error('JWT_SECRET is required to use authentication');
 
     const payload = jwt.verify(header.slice(7), env.JWT_SECRET);

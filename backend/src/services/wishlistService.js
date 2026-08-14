@@ -16,15 +16,19 @@ function publicProduct(product) {
     isActive: product.isActive,
     onHand: product.onHand,
     reserved: product.reserved,
-    available: product.onHand - product.reserved
+    available: product.onHand - product.reserved,
   };
 }
 
 export async function listWishlistItems(customerId, { page, limit }) {
   const filter = { customerId };
   const [items, total] = await Promise.all([
-    WishlistItem.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
-    WishlistItem.countDocuments(filter)
+    WishlistItem.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .lean(),
+    WishlistItem.countDocuments(filter),
   ]);
   const products = await Product.find({ _id: { $in: items.map((item) => item.productId) } }).lean();
   const productsById = new Map(products.map((product) => [product._id.toString(), product]));

@@ -11,9 +11,9 @@ const productSchema = new mongoose.Schema(
     priceCents: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
     onHand: { type: Number, required: true, min: 0, validate: Number.isSafeInteger },
     reserved: { type: Number, required: true, min: 0, default: 0, validate: Number.isSafeInteger },
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
   },
-  { timestamps: true, versionKey: false }
+  { timestamps: true, versionKey: false },
 );
 
 productSchema.index({ isActive: 1, category: 1, name: 1 });

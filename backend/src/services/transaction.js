@@ -8,11 +8,14 @@ export async function runTransaction(work) {
     const session = await mongoose.startSession();
     try {
       let result;
-      await session.withTransaction(async () => { result = await work(session); });
+      await session.withTransaction(async () => {
+        result = await work(session);
+      });
       return result;
     } catch (error) {
       lastError = error;
-      const transient = error?.hasErrorLabel?.('TransientTransactionError') || error?.hasErrorLabel?.('UnknownTransactionCommitResult');
+      const transient =
+        error?.hasErrorLabel?.('TransientTransactionError') || error?.hasErrorLabel?.('UnknownTransactionCommitResult');
       if (!transient || attempt === MAX_TRANSACTION_ATTEMPTS - 1) throw error;
     } finally {
       await session.endSession();

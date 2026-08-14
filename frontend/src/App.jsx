@@ -49,14 +49,26 @@ function LandingThemeToggle() {
     applyTheme(next);
     setTheme(next);
   };
-  return <button type="button" className="theme-toggle" data-tooltip={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={toggle}>{theme === 'dark' ? '☀' : '☾'}</button>;
+  return (
+    <button
+      type="button"
+      className="theme-toggle"
+      data-tooltip={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+      onClick={toggle}
+    >
+      {theme === 'dark' ? '☀' : '☾'}
+    </button>
+  );
 }
 
 function LandingPage() {
   return (
     <main className="landing-shell">
       <nav className="site-nav" aria-label="Main navigation">
-        <Link className="brand" to="/">reserve<span>wise</span></Link>
+        <Link className="brand" to="/">
+          reserve<span>wise</span>
+        </Link>
         <div className="nav-actions">
           <LandingThemeToggle />
         </div>
@@ -64,16 +76,34 @@ function LandingPage() {
       <section className="hero">
         <p className="eyebrow">Inventory, held with confidence</p>
         <h1>Every unit accounted for.</h1>
-        <p className="hero-copy">Reserve scarce inventory without the guesswork. A calmer, precise workflow for customers and operations teams.</p>
+        <p className="hero-copy">
+          Reserve scarce inventory without the guesswork. A calmer, precise workflow for customers and operations teams.
+        </p>
         <div className="hero-actions">
-          <Link className="button button-primary" to="/register">Start reserving</Link>
-          <Link className="button button-secondary" to="/login">Sign in to your account</Link>
+          <Link className="button button-primary" to="/register">
+            Start reserving
+          </Link>
+          <Link className="button button-secondary" to="/login">
+            Sign in to your account
+          </Link>
         </div>
       </section>
       <section className="assurance-grid" aria-label="Product benefits">
-        <article><span>01</span><h2>Accurate stock</h2><p>Availability is calculated and protected at the moment you reserve.</p></article>
-        <article><span>02</span><h2>Time-bound holds</h2><p>Pending reservations release automatically when they are no longer needed.</p></article>
-        <article><span>03</span><h2>Clear control</h2><p>Customers and inventory administrators each see exactly what matters.</p></article>
+        <article>
+          <span>01</span>
+          <h2>Accurate stock</h2>
+          <p>Availability is calculated and protected at the moment you reserve.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <h2>Time-bound holds</h2>
+          <p>Pending reservations release automatically when they are no longer needed.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <h2>Clear control</h2>
+          <p>Customers and inventory administrators each see exactly what matters.</p>
+        </article>
       </section>
     </main>
   );

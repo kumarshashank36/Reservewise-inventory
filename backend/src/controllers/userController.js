@@ -3,12 +3,14 @@ import { listUsers, provisionUser, reactivateUserByAdmin, softDeleteUserByAdmin 
 import { paginationMeta, parsePagination } from '../services/pagination.js';
 
 const email = z.string().trim().toLowerCase().email();
-const createUserSchema = z.object({
-  name: z.string().trim().min(2).max(100),
-  email,
-  password: z.string().min(10, 'Password must contain at least 10 characters').max(128),
-  role: z.enum(['customer', 'admin'])
-}).strict();
+const createUserSchema = z
+  .object({
+    name: z.string().trim().min(2).max(100),
+    email,
+    password: z.string().min(10, 'Password must contain at least 10 characters').max(128),
+    role: z.enum(['customer', 'admin']),
+  })
+  .strict();
 
 export async function list(req, res) {
   const { page, limit } = parsePagination(req.query);

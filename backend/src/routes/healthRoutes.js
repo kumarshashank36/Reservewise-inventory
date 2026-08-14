@@ -8,7 +8,7 @@ router.get('/health', (req, res) => {
   res.status(databaseConnected ? 200 : 503).json({
     status: databaseConnected ? 'ok' : 'degraded',
     service: 'inventory-reservation-api',
-    database: databaseConnected ? 'connected' : 'not-connected'
+    database: databaseConnected ? 'connected' : 'not-connected',
   });
 });
 

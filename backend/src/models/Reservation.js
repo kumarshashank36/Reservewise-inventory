@@ -10,23 +10,27 @@ const reservationItemSchema = new mongoose.Schema(
     // Snapshot display fields so reservation rows can render product artwork
     // without joining the products collection (images may change or vanish later).
     imageUrl: { type: String, maxlength: 500, default: '' },
-    category: { type: String, default: 'misc' }
+    category: { type: String, default: 'misc' },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const reservationSchema = new mongoose.Schema(
   {
     customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     status: { type: String, enum: ['pending', 'completed', 'cancelled', 'expired'], default: 'pending', index: true },
-    items: { type: [reservationItemSchema], required: true, validate: [(items) => items.length > 0, 'A reservation needs one or more items'] },
+    items: {
+      type: [reservationItemSchema],
+      required: true,
+      validate: [(items) => items.length > 0, 'A reservation needs one or more items'],
+    },
     idempotencyKey: { type: String, required: true, maxlength: 128 },
     expiresAt: { type: Date, required: true, index: true },
     completedAt: { type: Date, default: null },
     cancelledAt: { type: Date, default: null },
-    expiredAt: { type: Date, default: null }
+    expiredAt: { type: Date, default: null },
   },
-  { timestamps: true, versionKey: false }
+  { timestamps: true, versionKey: false },
 );
 
 reservationSchema.index({ customerId: 1, idempotencyKey: 1 }, { unique: true });

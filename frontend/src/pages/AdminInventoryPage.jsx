@@ -325,7 +325,11 @@ export function AdminInventory() {
               <span>{product.reserved}</span>
               <span>{product.onHand}</span>
               <span className={`inline-flex items-center gap-1.5 ${product.isActive ? 'stock-live' : 'stock-empty'}`}>
-                {product.isActive ? <CheckCircle2 size={12} strokeWidth={2.6} aria-hidden="true" /> : <CircleOff size={12} strokeWidth={2.6} aria-hidden="true" />}
+                {product.isActive ? (
+                  <CheckCircle2 size={12} strokeWidth={2.6} aria-hidden="true" />
+                ) : (
+                  <CircleOff size={12} strokeWidth={2.6} aria-hidden="true" />
+                )}
                 {product.isActive ? 'Active' : 'Inactive'}
               </span>
               <div className="table-actions">

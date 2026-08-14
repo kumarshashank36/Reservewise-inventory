@@ -30,7 +30,7 @@ async function releaseItems(reservation, session) {
     const result = await Product.updateOne(
       { _id: item.productId, reserved: { $gte: item.quantity } },
       { $inc: { reserved: -item.quantity } },
-      { session }
+      { session },
     );
     if (result.modifiedCount !== 1) {
       throw new Error(`Inventory integrity violation while releasing reservation ${reservation._id}`);
@@ -45,7 +45,7 @@ async function transitionPendingReservation(reservation, status, session, now) {
   const claimed = await Reservation.updateOne(
     { _id: reservation._id, status: 'pending' },
     { $set: { status, [timestampField]: now } },
-    { session }
+    { session },
   );
   if (claimed.modifiedCount !== 1) {
     throw new AppError(409, 'RESERVATION_STATE_CHANGED', `The reservation changed state before it could be ${status}`);
@@ -59,7 +59,7 @@ async function consumeItems(reservation, session) {
     const result = await Product.updateOne(
       { _id: item.productId, onHand: { $gte: item.quantity }, reserved: { $gte: item.quantity } },
       { $inc: { onHand: -item.quantity, reserved: -item.quantity } },
-      { session }
+      { session },
     );
     if (result.modifiedCount !== 1) {
       throw new Error(`Inventory integrity violation while completing reservation ${reservation._id}`);
@@ -81,26 +81,39 @@ export async function createReservation({ customerId, items, idempotencyKey }) {
       const productIds = normalisedItems.map((item) => new mongoose.Types.ObjectId(item.productId));
       const products = await Product.find({ _id: { $in: productIds } }).session(session);
       const productsById = new Map(products.map((product) => [product._id.toString(), product]));
-      if (products.length !== normalisedItems.length) throw new AppError(404, 'PRODUCT_NOT_FOUND', 'One or more products were not found');
+      if (products.length !== normalisedItems.length)
+        throw new AppError(404, 'PRODUCT_NOT_FOUND', 'One or more products were not found');
 
       const snapshots = [];
       for (const item of normalisedItems) {
         const product = productsById.get(item.productId);
-        if (!product.isActive) throw new AppError(409, 'PRODUCT_INACTIVE', `${product.name} is not available for reservation`);
+        if (!product.isActive)
+          throw new AppError(409, 'PRODUCT_INACTIVE', `${product.name} is not available for reservation`);
         const increment = await Product.updateOne(
           {
             _id: product._id,
             isActive: true,
-            $expr: { $gte: [{ $subtract: ['$onHand', '$reserved'] }, item.quantity] }
+            $expr: { $gte: [{ $subtract: ['$onHand', '$reserved'] }, item.quantity] },
           },
           { $inc: { reserved: item.quantity } },
-          { session }
+          { session },
         );
-        if (increment.modifiedCount !== 1) throw new AppError(409, 'INSUFFICIENT_INVENTORY', `${product.name} no longer has enough available inventory`);
-        snapshots.push({ productId: product._id, sku: product.sku, name: product.name, quantity: item.quantity, priceCents: product.priceCents, imageUrl: product.imageUrl ?? '', category: product.category ?? 'misc' });
+        if (increment.modifiedCount !== 1)
+          throw new AppError(409, 'INSUFFICIENT_INVENTORY', `${product.name} no longer has enough available inventory`);
+        snapshots.push({
+          productId: product._id,
+          sku: product.sku,
+          name: product.name,
+          quantity: item.quantity,
+          priceCents: product.priceCents,
+          imageUrl: product.imageUrl ?? '',
+          category: product.category ?? 'misc',
+        });
       }
 
-      const [reservation] = await Reservation.create([{ customerId, items: snapshots, idempotencyKey, expiresAt }], { session });
+      const [reservation] = await Reservation.create([{ customerId, items: snapshots, idempotencyKey, expiresAt }], {
+        session,
+      });
       return { reservation, replayed: false };
     });
   } catch (error) {
@@ -117,8 +130,11 @@ export async function listCustomerReservations(customerId, { page, limit, status
   const filter = { customerId };
   if (status) filter.status = status;
   const [reservations, total] = await Promise.all([
-    Reservation.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit),
-    Reservation.countDocuments(filter)
+    Reservation.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit),
+    Reservation.countDocuments(filter),
   ]);
   return { reservations, total };
 }
@@ -138,22 +154,33 @@ export async function listAdminReservations({ page, limit, status, search, sort 
   }
   const sortOption = sort === 'createdAt-asc' ? { createdAt: 1 } : { createdAt: -1 };
   const [reservations, total] = await Promise.all([
-    Reservation.find(filter).populate('customerId', 'name email').sort(sortOption).skip((page - 1) * limit).limit(limit),
-    Reservation.countDocuments(filter)
+    Reservation.find(filter)
+      .populate('customerId', 'name email')
+      .sort(sortOption)
+      .skip((page - 1) * limit)
+      .limit(limit),
+    Reservation.countDocuments(filter),
   ]);
   return { reservations, total };
 }
 
 async function releaseExpiredReservation(reservationId, now = new Date()) {
   return runTransaction(async (session) => {
-    const reservation = await Reservation.findOne({ _id: reservationId, status: 'pending', expiresAt: { $lte: now } }).session(session);
+    const reservation = await Reservation.findOne({
+      _id: reservationId,
+      status: 'pending',
+      expiresAt: { $lte: now },
+    }).session(session);
     if (!reservation) return null;
     return transitionPendingReservation(reservation, 'expired', session, now);
   });
 }
 
 export async function expireDueReservations({ limit = 100 } = {}) {
-  const candidates = await Reservation.find({ status: 'pending', expiresAt: { $lte: new Date() } }).select('_id').limit(limit).lean();
+  const candidates = await Reservation.find({ status: 'pending', expiresAt: { $lte: new Date() } })
+    .select('_id')
+    .limit(limit)
+    .lean();
   const results = await Promise.all(candidates.map(({ _id }) => releaseExpiredReservation(_id)));
   return results.filter(Boolean).length;
 }
@@ -163,11 +190,17 @@ export async function cancelReservation(customerId, reservationId) {
     const reservation = await Reservation.findOne({ _id: reservationId, customerId }).session(session);
     if (!reservation) throw new AppError(404, 'RESERVATION_NOT_FOUND', 'Reservation was not found');
     if (reservation.status === 'cancelled') return { reservation, alreadyTerminal: true };
-    if (reservation.status !== 'pending') throw new AppError(409, 'RESERVATION_NOT_CANCELLABLE', 'Only pending reservations can be cancelled');
-    if (reservation.expiresAt <= new Date()) return { expired: true, reservation: await transitionPendingReservation(reservation, 'expired', session, new Date()) };
+    if (reservation.status !== 'pending')
+      throw new AppError(409, 'RESERVATION_NOT_CANCELLABLE', 'Only pending reservations can be cancelled');
+    if (reservation.expiresAt <= new Date())
+      return {
+        expired: true,
+        reservation: await transitionPendingReservation(reservation, 'expired', session, new Date()),
+      };
     return { reservation: await transitionPendingReservation(reservation, 'cancelled', session, new Date()) };
   });
-  if (result.expired) throw new AppError(409, 'RESERVATION_EXPIRED', 'This reservation expired and its inventory was released');
+  if (result.expired)
+    throw new AppError(409, 'RESERVATION_EXPIRED', 'This reservation expired and its inventory was released');
   return result.reservation;
 }
 
@@ -176,23 +209,30 @@ export async function completeReservation(customerId, reservationId) {
     const reservation = await Reservation.findOne({ _id: reservationId, customerId }).session(session);
     if (!reservation) throw new AppError(404, 'RESERVATION_NOT_FOUND', 'Reservation was not found');
     if (reservation.status === 'completed') return { reservation };
-    if (reservation.status !== 'pending') throw new AppError(409, 'RESERVATION_NOT_COMPLETABLE', 'Only pending reservations can be completed');
+    if (reservation.status !== 'pending')
+      throw new AppError(409, 'RESERVATION_NOT_COMPLETABLE', 'Only pending reservations can be completed');
     const now = new Date();
-    if (reservation.expiresAt <= now) return { expired: true, reservation: await transitionPendingReservation(reservation, 'expired', session, now) };
+    if (reservation.expiresAt <= now)
+      return { expired: true, reservation: await transitionPendingReservation(reservation, 'expired', session, now) };
     // The claim re-checks expiry inside the update so a completion cannot land after its hold window ended.
     const claimed = await Reservation.updateOne(
       { _id: reservation._id, status: 'pending', expiresAt: { $gt: now } },
       { $set: { status: 'completed', completedAt: now } },
-      { session }
+      { session },
     );
     if (claimed.modifiedCount !== 1) {
-      throw new AppError(409, 'RESERVATION_STATE_CHANGED', 'The reservation changed state before it could be completed');
+      throw new AppError(
+        409,
+        'RESERVATION_STATE_CHANGED',
+        'The reservation changed state before it could be completed',
+      );
     }
     // Completion consumes the units: onHand and reserved move together, so the sale reduces
     // physical stock without breaking the onHand >= reserved invariant.
     await consumeItems(reservation, session);
     return { reservation: await Reservation.findById(reservation._id).session(session) };
   });
-  if (result.expired) throw new AppError(409, 'RESERVATION_EXPIRED', 'This reservation expired and its inventory was released');
+  if (result.expired)
+    throw new AppError(409, 'RESERVATION_EXPIRED', 'This reservation expired and its inventory was released');
   return result.reservation;
 }

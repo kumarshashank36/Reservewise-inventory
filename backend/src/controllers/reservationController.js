@@ -1,25 +1,50 @@
 import mongoose from 'mongoose';
 import { z } from 'zod';
-import { cancelReservation, completeReservation, createReservation, getCustomerReservation, listAdminReservations, listCustomerReservations } from '../services/reservationService.js';
+import {
+  cancelReservation,
+  completeReservation,
+  createReservation,
+  getCustomerReservation,
+  listAdminReservations,
+  listCustomerReservations,
+} from '../services/reservationService.js';
 import { paginationMeta, parsePagination } from '../services/pagination.js';
 
 const productId = z.string().refine((value) => mongoose.Types.ObjectId.isValid(value), 'Invalid product identifier');
-const createSchema = z.object({
-  items: z.array(z.object({ productId, quantity: z.number().int().min(1).max(10_000) }).strict()).min(1).max(25)
-}).strict();
+const createSchema = z
+  .object({
+    items: z
+      .array(z.object({ productId, quantity: z.number().int().min(1).max(10_000) }).strict())
+      .min(1)
+      .max(25),
+  })
+  .strict();
 
 function idempotencyKey(req) {
   const key = req.headers['idempotency-key'];
   if (typeof key !== 'string' || key.trim().length < 8 || key.length > 128) {
-    throw new z.ZodError([{ code: 'custom', path: ['headers', 'idempotency-key'], message: 'Idempotency-Key must be between 8 and 128 characters' }]);
+    throw new z.ZodError([
+      {
+        code: 'custom',
+        path: ['headers', 'idempotency-key'],
+        message: 'Idempotency-Key must be between 8 and 128 characters',
+      },
+    ]);
   }
   return key.trim();
 }
 
 export async function create(req, res) {
   const input = createSchema.parse(req.body);
-  const result = await createReservation({ customerId: req.user.id, items: input.items, idempotencyKey: idempotencyKey(req) });
-  res.status(result.replayed ? 200 : 201).set('Idempotency-Replayed', String(result.replayed)).json({ reservation: result.reservation });
+  const result = await createReservation({
+    customerId: req.user.id,
+    items: input.items,
+    idempotencyKey: idempotencyKey(req),
+  });
+  res
+    .status(result.replayed ? 200 : 201)
+    .set('Idempotency-Replayed', String(result.replayed))
+    .json({ reservation: result.reservation });
 }
 
 export async function listMine(req, res) {
@@ -42,13 +67,13 @@ export async function complete(req, res) {
 }
 
 const customerReservationQuery = z.object({
-  status: z.enum(['pending', 'completed', 'cancelled', 'expired']).optional()
+  status: z.enum(['pending', 'completed', 'cancelled', 'expired']).optional(),
 });
 
 const adminReservationQuery = z.object({
   status: z.enum(['pending', 'completed', 'cancelled', 'expired']).optional(),
   search: z.string().trim().max(100).optional(),
-  sort: z.enum(['createdAt-desc', 'createdAt-asc']).default('createdAt-desc')
+  sort: z.enum(['createdAt-desc', 'createdAt-asc']).default('createdAt-desc'),
 });
 
 export async function listAdmin(req, res) {
