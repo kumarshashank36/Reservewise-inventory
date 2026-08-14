@@ -14,13 +14,23 @@ export function WishlistProvider({ children }) {
   useEffect(() => {
     if (session.user.role !== 'customer') { setLoading(false); return; }
     let cancelled = false;
-    api.wishlist(session.token).then(({ payload }) => {
+    const load = () => api.wishlist(session.token).then(({ payload }) => {
       if (cancelled) return;
       setIds(new Set(payload.items.map((item) => item.product._id)));
     }).catch(() => {
       if (!cancelled) setIds(new Set());
-    }).finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+    });
+    load().finally(() => { if (!cancelled) setLoading(false); });
+    // Refetch the membership set when the tab regains focus so hearts changed in
+    // another tab (or another device) are reflected without a reload.
+    const onVisible = () => { if (document.visibilityState === 'visible') load(); };
+    window.addEventListener('focus', onVisible);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      cancelled = true;
+      window.removeEventListener('focus', onVisible);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [session.token]);
 
   const toggle = useCallback(async (productId) => {
