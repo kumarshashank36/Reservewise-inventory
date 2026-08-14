@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext } from '../context/AuthContext.jsx';
+import { SnackbarProvider } from '../context/SnackbarContext.jsx';
 import { ApiError, api } from '../services/api.js';
 import { AdminInventory, AdminReservations, AdminUsers } from './AdminPages.jsx';
 
@@ -21,7 +22,7 @@ const adminAuth = {
 };
 
 function renderWithAuth(children) {
-  return render(<AuthContext.Provider value={adminAuth}><MemoryRouter>{children}</MemoryRouter></AuthContext.Provider>);
+  return render(<AuthContext.Provider value={adminAuth}><MemoryRouter><SnackbarProvider>{children}</SnackbarProvider></MemoryRouter></AuthContext.Provider>);
 }
 
 const product = (overrides = {}) => ({ _id: 'p1', sku: 'LAMP-01', name: 'Desk Lamp', priceCents: 5900, onHand: 3, reserved: 0, available: 3, isActive: true, ...overrides });
@@ -48,6 +49,7 @@ describe('AdminInventory', () => {
 
     await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith('admin-token', 'p1', expect.objectContaining({ name: 'Renamed Lamp', onHand: 2, category: 'electronics', imageUrl: 'https://example.com/lamp.jpg' })));
     await waitFor(() => expect(screen.queryByLabelText('Name')).not.toBeInTheDocument());
+    expect(await screen.findByText('Renamed Lamp updated.')).toBeInTheDocument();
   });
 
   it('rejects a stock value below currently reserved units when editing', async () => {
@@ -92,9 +94,11 @@ describe('AdminInventory', () => {
     fireEvent.change(screen.getByLabelText('Image URL'), { target: { value: 'https://example.com/new-item.jpg' } });
     fireEvent.click(screen.getByRole('button', { name: 'Add product' }));
     await waitFor(() => expect(api.createProduct).toHaveBeenCalledWith('admin-token', expect.objectContaining({ sku: 'NEW-01', priceCents: 100, onHand: 4, category: 'furniture', imageUrl: 'https://example.com/new-item.jpg' })));
+    expect(await screen.findByText('New Item added to the catalog.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Deactivate' }));
     await waitFor(() => expect(api.updateProduct).toHaveBeenCalledWith('admin-token', 'p1', { isActive: false }));
+    expect(await screen.findByText('Desk Lamp is now inactive.')).toBeInTheDocument();
   });
 });
 
@@ -189,7 +193,7 @@ describe('AdminUsers', () => {
     expect(screen.getByText(/Page 1 of 2/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', { page: 2, limit: 10, category: null, active: null, search: null, sort: 'updatedAt-desc' }));
+    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', { page: 2, limit: 10, category: null, active: null, search: null, sort: 'name' }));
   });
 
   it('changes the inventory page size and resets to the first page', async () => {
@@ -198,7 +202,7 @@ describe('AdminUsers', () => {
 
     await screen.findByText('Desk Lamp');
     fireEvent.change(screen.getByRole('combobox', { name: 'Items per page' }), { target: { value: '5' } });
-    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', { page: 1, limit: 5, category: null, active: null, search: null, sort: 'updatedAt-desc' }));
+    await waitFor(() => expect(api.adminProducts).toHaveBeenLastCalledWith('admin-token', { page: 1, limit: 5, category: null, active: null, search: null, sort: 'name' }));
   });
 
   it('filters and sorts the inventory toolbar', async () => {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useWishlist } from '../context/WishlistContext.jsx';
+import { useSnackbar } from '../context/SnackbarContext.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/AsyncState.jsx';
 import { PageHeader } from '../components/AppShell.jsx';
 import { Pagination } from '../components/Pagination.jsx';
@@ -19,7 +20,7 @@ export function CustomerWishlist() {
   const [pagination, setPagination] = useState(null); const [page, setPage] = useState(1); const [limit, setLimit] = useState(PAGE_SIZE);
   const [quantities, setQuantities] = useState({});
   const [actionId, setActionId] = useState(null);
-  const [notice, setNotice] = useState(null);
+  const { showSnackbar } = useSnackbar();
   const idempotencyKeys = useRef({});
 
   const refresh = useCallback(async ({ silent = false } = {}) => {
@@ -53,24 +54,23 @@ export function CustomerWishlist() {
   }, [refresh]);
 
   const setQuantity = (product, quantity) => {
-    setNotice(null);
     setQuantities((current) => { const next = { ...current }; if (quantity <= 0) delete next[product._id]; else next[product._id] = Math.min(quantity, product.available); return next; });
   };
 
   const reserve = async (product) => {
     const quantity = quantities[product._id];
     if (!quantity) return;
-    setActionId(product._id); setNotice(null);
+    setActionId(product._id);
     idempotencyKeys.current[product._id] ??= crypto.randomUUID();
     try {
       const { payload } = await api.createReservation(session.token, [{ productId: product._id, quantity }], idempotencyKeys.current[product._id]);
       delete idempotencyKeys.current[product._id];
       setQuantities((current) => { const next = { ...current }; delete next[product._id]; return next; });
       const minutes = heldMinutes(payload.reservation);
-      setNotice({ kind: 'success', text: `${product.name} is held for ${minutes} minute${minutes === 1 ? '' : 's'}. Review it under My reservations.` });
+      showSnackbar({ kind: 'success', text: `${product.name} is held for ${minutes} minute${minutes === 1 ? '' : 's'}. Review it under My reservations.` });
       await refresh({ silent: true });
     } catch (error) {
-      setNotice({ kind: 'error', text: error.message });
+      showSnackbar({ kind: 'error', text: error.message });
     } finally { setActionId(null); }
   };
 
@@ -80,7 +80,7 @@ export function CustomerWishlist() {
       await toggle(product._id);
       await refresh({ silent: true });
     } catch (error) {
-      setNotice({ kind: 'error', text: error.message });
+      showSnackbar({ kind: 'error', text: error.message });
     } finally { setActionId(null); }
   };
 
@@ -88,7 +88,7 @@ export function CustomerWishlist() {
   if (data.error && !data.items.length) return <ErrorState error={data.error} retry={refresh} />;
   return <>
     <PageHeader eyebrow="Your saved products" title="Wishlist" detail="Saved products are not reserved — inventory is only held when you reserve. Availability below is live." />
-    {notice && <div className={`notice ${notice.kind}`} role="status">{notice.text}</div>}
+
     {data.items.length ? <div className="reservation-list">{data.items.map(({ product, addedAt }) => {
       const available = product.isActive ? product.available : 0;
       const quantity = quantities[product._id] ?? 0;

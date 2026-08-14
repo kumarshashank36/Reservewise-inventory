@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useSnackbar } from '../context/SnackbarContext.jsx';
 import { useWishlist } from '../context/WishlistContext.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/AsyncState.jsx';
 import { PageHeader } from '../components/AppShell.jsx';
@@ -27,7 +28,7 @@ function readDraft(draftKey) {
 }
 
 export function CustomerReservations() {
-  const { session } = useAuth(); const [data, setData] = useState({ loading: true, error: null, reservations: [] }); const [pagination, setPagination] = useState(null); const [page, setPage] = useState(1); const [limit, setLimit] = useState(PAGE_SIZE); const [actionId, setActionId] = useState(null); const [now, setNow] = useState(() => Date.now());
+  const { session } = useAuth(); const { showSnackbar } = useSnackbar(); const [data, setData] = useState({ loading: true, error: null, reservations: [] }); const [pagination, setPagination] = useState(null); const [page, setPage] = useState(1); const [limit, setLimit] = useState(PAGE_SIZE); const [actionId, setActionId] = useState(null); const [now, setNow] = useState(() => Date.now());
   const refresh = useCallback(async ({ silent = false } = {}) => { if (!silent) setData((current) => ({ ...current, loading: true, error: null })); try { const { payload } = await api.reservations(session.token, { page, limit }); setData({ loading: false, error: null, reservations: payload.reservations }); setPagination(payload.pagination ?? null); if (payload.pagination && payload.pagination.totalPages < page) setPage(payload.pagination.totalPages); } catch (error) { setData((current) => ({ ...current, loading: false, error })); } }, [session.token, page, limit]);
   useEffect(() => { refresh(); }, [refresh]);
   const hasPending = data.reservations.some((reservation) => reservation.status === 'pending');
@@ -47,7 +48,7 @@ export function CustomerReservations() {
     return () => { window.removeEventListener('focus', onVisible); document.removeEventListener('visibilitychange', onVisible); };
   }, [refresh]);
 
-  const transition = async (reservation, type) => { setActionId(reservation._id); try { await (type === 'complete' ? api.completeReservation(session.token, reservation._id) : api.cancelReservation(session.token, reservation._id)); await refresh(); } catch (error) { setData((current) => ({ ...current, error })); } finally { setActionId(null); } };
+  const transition = async (reservation, type) => { setActionId(reservation._id); try { await (type === 'complete' ? api.completeReservation(session.token, reservation._id) : api.cancelReservation(session.token, reservation._id)); showSnackbar({ kind: 'success', text: type === 'complete' ? 'Reservation completed — your items are secured.' : 'Reservation released — the inventory is available again.' }); await refresh(); } catch (error) { showSnackbar({ kind: 'error', text: error.message }); } finally { setActionId(null); } };
   if (data.loading) return <LoadingState label="Loading reservations" />; if (data.error && !data.reservations.length) return <ErrorState error={data.error} retry={refresh} />;
   return <><PageHeader eyebrow="Your activity" title="My reservations" detail="Complete a pending reservation before its hold window ends, or release it early." />{data.error && <div className="notice error">{data.error.message}</div>}
     {data.reservations.length ? <div className="reservation-list">{data.reservations.map((reservation) => {

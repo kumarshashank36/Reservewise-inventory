@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useWishlist } from '../context/WishlistContext.jsx';
+import { useSnackbar } from '../context/SnackbarContext.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/AsyncState.jsx';
 import { PageHeader } from '../components/AppShell.jsx';
 import { Pagination } from '../components/Pagination.jsx';
@@ -42,7 +43,8 @@ export function CustomerCatalog() {
   // The draft (selections + the pending idempotency key) survives navigation and refreshes.
   const idempotencyKey = useRef(null);
   const [draft, setDraft] = useState(() => { const restored = readDraft(draftKey); if (restored) idempotencyKey.current = restored.key; return restored ?? emptyDraft(); });
-  const [submitting, setSubmitting] = useState(false); const [notice, setNotice] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
+  const { showSnackbar } = useSnackbar();
   useEffect(() => { try { localStorage.setItem(draftKey, JSON.stringify(draft)); } catch { /* storage unavailable */ } }, [draft, draftKey]);
   const setParam = (patch) => {
     setSearchParams((prev) => {
@@ -87,16 +89,16 @@ export function CustomerCatalog() {
     setState({ loading: false, error: null });
   }, [session.token, page, limit, category, search, sort]);
   useEffect(() => { load(); }, [load]);
-  const selectCategory = (next) => { if (next === category) return; setNotice(null); setParam({ category: next || null, page: null }); };
-  const applySearch = () => { setNotice(null); setParam({ q: searchInput.trim() || null, page: null }); };
+  const selectCategory = (next) => { if (next === category) return; setParam({ category: next || null, page: null }); };
+  const applySearch = () => { setParam({ q: searchInput.trim() || null, page: null }); };
   const lines = useMemo(() => products.filter((product) => draft.items[product._id]).map((product) => ({ product, quantity: draft.items[product._id] })), [products, draft.items]);
   const itemCount = Object.values(draft.items).reduce((total, quantity) => total + quantity, 0);
   const hiddenLineCount = Object.keys(draft.items).length - lines.length;
-  const setQuantity = (product, quantity) => { setNotice(null); idempotencyKey.current = null; setDraft((current) => { const items = { ...current.items }; if (quantity <= 0) delete items[product._id]; else items[product._id] = Math.min(quantity, product.available); return { items, key: null }; }); };
-  const onWishlistToggle = async (product) => { setNotice(null); try { await toggleWishlist(product._id); } catch (error) { setNotice({ kind: 'error', text: error.message }); } };
+  const setQuantity = (product, quantity) => { idempotencyKey.current = null; setDraft((current) => { const items = { ...current.items }; if (quantity <= 0) delete items[product._id]; else items[product._id] = Math.min(quantity, product.available); return { items, key: null }; }); };
+  const onWishlistToggle = async (product) => { try { await toggleWishlist(product._id); } catch (error) { showSnackbar({ kind: 'error', text: error.message }); } };
   const reserve = async () => {
     if (!itemCount) return;
-    setSubmitting(true); setNotice(null);
+    setSubmitting(true);
     // The key lives with the draft, so a retry after navigation still replays the
     // original reservation. The ref guards against double-submits in the same render.
     idempotencyKey.current ??= crypto.randomUUID();
@@ -106,14 +108,14 @@ export function CustomerCatalog() {
       const { payload } = await api.createReservation(session.token, Object.entries(draft.items).map(([productId, quantity]) => ({ productId, quantity })), key);
       idempotencyKey.current = null; setDraft(emptyDraft());
       const minutes = heldMinutes(payload.reservation);
-      setNotice({ kind: 'success', text: `Your inventory is held for ${minutes} minute${minutes === 1 ? '' : 's'}. Review it under My reservations.` });
+      showSnackbar({ kind: 'success', text: `Your inventory is held for ${minutes} minute${minutes === 1 ? '' : 's'}. Review it under My reservations.` });
       await load();
-    } catch (error) { setNotice({ kind: 'error', text: error.message }); } finally { setSubmitting(false); }
+    } catch (error) { showSnackbar({ kind: 'error', text: error.message }); } finally { setSubmitting(false); }
   };
   if (state.error && !products.length) return <ErrorState error={state.error} retry={load} />;
   return <><PageHeader eyebrow="Customer catalog" title="Available inventory" detail="Select quantities to place a ten-minute, protected hold." />
     {state.error && <div className="notice error">{state.error.message}</div>}
-    {notice && <div className={`notice ${notice.kind}`} role="status">{notice.text}</div>}
+
     <div className="catalog-layout"><div className="catalog-main"><div className="toolbar"><input className="toolbar-input" type="search" placeholder="Search products by name or SKU…" aria-label="Search products" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') applySearch(); }} /><select className="toolbar-select" aria-label="Sort products" value={sort} onChange={(e) => setParam({ sort: e.target.value, page: null })}><option value="name">Name A–Z</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option></select></div><div className="category-chips" role="tablist" aria-label="Product categories"><button type="button" role="tab" aria-selected={category === null} className={`category-chip${category === null ? ' selected' : ''}`} onClick={() => selectCategory(null)}>All</button>{CATEGORIES.map(({ value, label }) => <button key={value} type="button" role="tab" aria-selected={category === value} className={`category-chip${category === value ? ' selected' : ''}`} onClick={() => selectCategory(value)}>{label}</button>)}</div>{state.loading && !products.length ? <LoadingState label="Loading catalog" /> : <section className="product-grid">{products.length ? products.map((product) => <article className="product-card" key={product._id}><ProductImage product={product} /><div className="product-card-top"><span className="sku">{product.sku}</span><button className={`wishlist-button${wishlistIds.has(product._id) ? ' saved' : ''}`} aria-pressed={wishlistIds.has(product._id)} aria-label={`${wishlistIds.has(product._id) ? 'Remove' : 'Add'} ${product.name} ${wishlistIds.has(product._id) ? 'from' : 'to'} wishlist`} onClick={() => onWishlistToggle(product)}>{wishlistIds.has(product._id) ? '♥' : '♡'}</button><span className={product.available ? 'stock-live' : 'stock-empty'}>{product.available ? `${product.available} available` : 'Unavailable'}</span></div>{categoryLabel(product.category) && <p className="product-category">{categoryLabel(product.category)}</p>}<h2>{product.name}</h2><p>{product.description || 'No description provided.'}</p><div className="product-card-footer"><strong>{money(product.priceCents)}</strong><div className="stepper"><button disabled={!draft.items[product._id]} onClick={() => setQuantity(product, (draft.items[product._id] ?? 0) - 1)} aria-label={`Remove one ${product.name}`}>−</button><span>{draft.items[product._id] ?? 0}</span><button disabled={!product.available || (draft.items[product._id] ?? 0) >= product.available} onClick={() => setQuantity(product, (draft.items[product._id] ?? 0) + 1)} aria-label={`Add one ${product.name}`}>+</button></div></div></article>) : <EmptyState title={search ? 'No products match your search' : category ? `No products in ${categoryLabel(category)}` : 'No inventory is available'} detail="Check back when your operations team adds active products." />}</section>}<Pagination pagination={pagination} onChange={(next) => setParam({ page: next === 1 ? null : next })} onLimitChange={(next) => setParam({ limit: next === PAGE_SIZE ? null : next, page: null })} label="products" /></div>
       <aside className="cart-panel"><div><p className="eyebrow">Reservation draft</p><h2>{itemCount ? `${itemCount} unit${itemCount === 1 ? '' : 's'} selected` : 'Your selection is empty'}</h2></div>{itemCount ? <><div className="cart-lines">{lines.map(({ product, quantity }) => <div key={product._id}><ProductImage product={product} className="cart-thumb" /><span>{product.name} <small>× {quantity}</small></span><strong>{money(product.priceCents * quantity)}</strong></div>)}</div>{hiddenLineCount > 0 && <p className="cart-note">+{hiddenLineCount} more selection{hiddenLineCount === 1 ? '' : 's'} on other pages</p>}<button className="button button-primary form-submit" disabled={submitting} onClick={reserve}>{submitting ? 'Securing inventory…' : 'Reserve inventory'}</button><p className="cart-note">Pending reservations expire automatically after their hold window.</p></> : <p className="muted">Choose an available item to start a reservation.</p>}</aside>
     </div></>;

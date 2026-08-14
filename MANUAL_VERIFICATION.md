@@ -54,7 +54,7 @@ HOLD_MINUTES=1 npm run verify:ui
 
 1. Add 2 × Desk Lamp and 1 × Chair → the cart panel shows "3 units selected" with line totals.
 2. Click **Reserve inventory**.
-3. **Expected:** a success notice with the hold length, the cart empties, and the catalog now shows 2 fewer lamps and 1 fewer chair available.
+3. **Expected:** a success **snackbar** appears bottom-right with the hold length ("Your inventory is held for N minutes…"), dismissible via its ×; the cart empties, and the catalog now shows fewer available units.
 4. Add a quantity, then navigate to Wishlist and back to Catalog.
 5. **Expected:** the draft (selections) is still there — it persists per customer across navigation and refreshes.
 6. With a draft selected, stop the backend (`kill` its process or Ctrl+C the dev run) and click Reserve → the failure notice appears.
@@ -111,7 +111,7 @@ HOLD_MINUTES=1 npm run verify:ui
 2. Type an on-hand value **below reserved** → **Save changes**.
 3. **Expected:** an inline error: "On-hand inventory cannot be reduced below currently reserved inventory (N)" and the value is unchanged. (The API enforces the same rule server-side — a 409.)
 4. Change the name, price, category, image URL, or description and type a valid on-hand → **Save changes**.
-5. **Expected:** the row updates after a reload with the new details and thumbnail.
+5. **Expected:** a success **snackbar** ("<name> updated.") appears bottom-right, the form closes, and the row updates after a reload with the new details and thumbnail **staying in place** — the inventory sorts by name by default, so edits and activate/deactivate never reorder rows (choose "Recently updated" explicitly to see recency order). Activating/deactivating shows its own snackbar.
    *Rule: admin adjustments never invalidate existing valid reservations; SKUs are immutable.*
 
 ### 14. Admin catalog control

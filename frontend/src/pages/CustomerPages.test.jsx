@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext } from '../context/AuthContext.jsx';
+import { SnackbarProvider } from '../context/SnackbarContext.jsx';
 import { WishlistProvider } from '../context/WishlistContext.jsx';
 import { ApiError, api } from '../services/api.js';
 import { CustomerCatalog, CustomerReservations } from './CustomerPages.jsx';
@@ -22,7 +23,7 @@ const customerAuth = {
 };
 
 function renderWithAuth(children) {
-  return render(<AuthContext.Provider value={customerAuth}><MemoryRouter><WishlistProvider>{children}</WishlistProvider></MemoryRouter></AuthContext.Provider>);
+  return render(<AuthContext.Provider value={customerAuth}><MemoryRouter><SnackbarProvider><WishlistProvider>{children}</WishlistProvider></SnackbarProvider></MemoryRouter></AuthContext.Provider>);
 }
 
 const product = (overrides = {}) => ({ _id: 'p1', sku: 'LAMP-01', name: 'Desk Lamp', description: 'Bright', priceCents: 5900, onHand: 3, reserved: 0, available: 3, isActive: true, ...overrides });
@@ -73,6 +74,21 @@ describe('CustomerCatalog', () => {
     expect(key).toMatch(/^[0-9a-f-]{36}$/);
 
     await screen.findByText(/held for 10 minutes/);
+  });
+
+  it('shows reservation outcomes as dismissible snackbars', async () => {
+    api.products.mockResolvedValue({ payload: { products: [product()] } });
+    api.createReservation.mockResolvedValue({ payload: { reservation: reservation({ createdAt: new Date(Date.now() - 10 * 60_000).toISOString(), expiresAt: new Date().toISOString() }) } });
+    renderWithAuth(<CustomerCatalog />);
+    await screen.findByText('Desk Lamp');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add one Desk Lamp' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Reserve inventory' }));
+    const snackbar = await screen.findByRole('status');
+    expect(snackbar).toHaveTextContent(/held for 10 minutes/);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss notification' }));
+    expect(screen.queryByText(/held for 10 minutes/)).not.toBeInTheDocument();
   });
 
   it('shows the server error and retries with the same idempotency key when a reservation fails', async () => {

@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
+import { SnackbarProvider } from './context/SnackbarContext.jsx';
 import { WishlistProvider } from './context/WishlistContext.jsx';
 import { AppShell } from './components/AppShell.jsx';
 import { LoadingState } from './components/AsyncState.jsx';
@@ -68,11 +69,11 @@ function CustomerLayout() {
 
 export default function App() {
   return (
-    <AuthProvider><Routes>
+    <AuthProvider><SnackbarProvider><Routes>
       <Route path="/" element={<LandingPage />} /><Route path="/login" element={<Suspense fallback={<AuthFallback />}><AuthPage mode="login" /></Suspense>} /><Route path="/register" element={<Suspense fallback={<AuthFallback />}><AuthPage mode="register" /></Suspense>} />
       <Route path="/app" element={<CustomerLayout />}><Route index element={<CustomerCatalog />} /><Route path="wishlist" element={<CustomerWishlist />} /><Route path="reservations" element={<CustomerReservations />} /></Route>
       <Route path="/admin" element={<Protected role="admin"><Suspense fallback={<LoadingState label="Loading inventory" />}><AdminInventory /></Suspense></Protected>} /><Route path="/admin/reservations" element={<Protected role="admin"><Suspense fallback={<LoadingState label="Loading reservations" />}><AdminReservations /></Suspense></Protected>} /><Route path="/admin/users" element={<Protected role="admin"><Suspense fallback={<LoadingState label="Loading team" />}><AdminUsers /></Suspense></Protected>} />
       <Route path="*" element={<LandingPage />} />
-    </Routes></AuthProvider>
+    </Routes></SnackbarProvider></AuthProvider>
   );
 }

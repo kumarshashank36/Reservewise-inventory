@@ -1,6 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthContext } from '../context/AuthContext.jsx';
+import { SnackbarProvider } from '../context/SnackbarContext.jsx';
 import { WishlistProvider } from '../context/WishlistContext.jsx';
 import { ApiError, api } from '../services/api.js';
 import { CustomerWishlist } from './WishlistPage.jsx';
@@ -23,7 +24,7 @@ const customerAuth = {
 function renderWishlist() {
   return render(
     <AuthContext.Provider value={customerAuth}>
-      <WishlistProvider><CustomerWishlist /></WishlistProvider>
+      <SnackbarProvider><WishlistProvider><CustomerWishlist /></WishlistProvider></SnackbarProvider>
     </AuthContext.Provider>
   );
 }

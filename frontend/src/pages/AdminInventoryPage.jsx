@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useSnackbar } from '../context/SnackbarContext.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/AsyncState.jsx';
 import { PageHeader } from '../components/AppShell.jsx';
 import { Pagination } from '../components/Pagination.jsx';
@@ -24,8 +25,9 @@ export function AdminInventory() {
   const activeParam = searchParams.get('active');
   const filterActive = activeParam === null ? null : activeParam === 'true';
   const search = searchParams.get('q') ?? null;
-  const sort = searchParams.get('sort') ?? 'updatedAt-desc';
-  const [data, setData] = useState({ loading: true, error: null, products: [] }); const [pagination, setPagination] = useState(null); const [form, setForm] = useState(blankProduct); const [saving, setSaving] = useState(false); const [open, setOpen] = useState(false); const [editing, setEditing] = useState(null);
+  // Stable default: rows keep their place across edits and activate/deactivate.
+  const sort = searchParams.get('sort') ?? 'name';
+  const { showSnackbar } = useSnackbar(); const [data, setData] = useState({ loading: true, error: null, products: [] }); const [pagination, setPagination] = useState(null); const [form, setForm] = useState(blankProduct); const [saving, setSaving] = useState(false); const [open, setOpen] = useState(false); const [editing, setEditing] = useState(null);
   const setParam = (patch) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -65,14 +67,16 @@ export function AdminInventory() {
     try {
       if (editing) {
         await api.updateProduct(session.token, editing._id, { name: form.name, description: form.description, priceCents, onHand, category: form.category, imageUrl: form.imageUrl.trim() });
+        showSnackbar({ kind: 'success', text: `${form.name} updated.` });
       } else {
         await api.createProduct(session.token, { ...form, priceCents, onHand, imageUrl: form.imageUrl.trim() || undefined });
+        showSnackbar({ kind: 'success', text: `${form.name} added to the catalog.` });
       }
       closeForm();
       if (page === 1) await load(); else setParam({ page: null });
-    } catch (error) { setData((current) => ({ ...current, error })); } finally { setSaving(false); }
+    } catch (error) { showSnackbar({ kind: 'error', text: error.message }); } finally { setSaving(false); }
   };
-  const setActive = async (product) => { try { await api.updateProduct(session.token, product._id, { isActive: !product.isActive }); await load(); } catch (error) { setData((current) => ({ ...current, error })); } };
+  const setActive = async (product) => { try { await api.updateProduct(session.token, product._id, { isActive: !product.isActive }); showSnackbar({ kind: 'success', text: `${product.name} is now ${product.isActive ? 'inactive' : 'active'}.` }); await load(); } catch (error) { showSnackbar({ kind: 'error', text: error.message }); } };
   if (data.error && !data.products.length) return <ErrorState error={data.error} retry={load} />;
   return <><PageHeader eyebrow="Operations control" title="Inventory" detail="On-hand stock can never be set below existing reservations." action={<button className="button button-primary" onClick={() => (open ? closeForm() : setOpen(true))}>{open ? 'Close' : 'Add product'}</button>} />{data.error && <div className="notice error">{data.error.message}</div>}
     <div className="toolbar"><input className="toolbar-input" type="search" placeholder="Search by name or SKU…" aria-label="Search products" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') applySearch(); }} /><select className="toolbar-select" aria-label="Filter category" value={filterCategory ?? ''} onChange={(e) => setParam({ category: e.target.value || null, page: null })}><option value="">All categories</option>{CATEGORIES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}</select><select className="toolbar-select" aria-label="Filter status" value={filterActive === null ? '' : String(filterActive)} onChange={(e) => setParam({ active: e.target.value || null, page: null })}><option value="">All statuses</option><option value="true">Active</option><option value="false">Inactive</option></select><select className="toolbar-select" aria-label="Sort products" value={sort} onChange={(e) => setParam({ sort: e.target.value, page: null })}><option value="updatedAt-desc">Recently updated</option><option value="name">Name A–Z</option><option value="price-asc">Price: low to high</option><option value="price-desc">Price: high to low</option></select></div>

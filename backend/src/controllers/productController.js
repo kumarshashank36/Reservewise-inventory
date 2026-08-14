@@ -38,7 +38,8 @@ const adminQuery = z.object({
   search,
   // Enum+transform rather than z.coerce.boolean(): coercion turns the string 'false' into true.
   active: z.enum(['true', 'false']).transform((value) => value === 'true').optional(),
-  sort: z.enum(['updatedAt-desc', 'name', 'price-asc', 'price-desc']).default('updatedAt-desc')
+  // Name is the stable default: editing or toggling a product never moves it in the list.
+  sort: z.enum(['updatedAt-desc', 'name', 'price-asc', 'price-desc']).default('name')
 });
 
 export async function listCatalog(req, res) {
