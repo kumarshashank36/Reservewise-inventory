@@ -5,14 +5,9 @@ import { AuthContext } from '../context/AuthContext.jsx';
 import { ApiError, api } from '../services/api.js';
 import { AuthPage } from './AuthPages.jsx';
 
-vi.mock('../services/api.js', () => {
-  class MockApiError extends Error {
-    constructor(message, { status = 500, code = 'INTERNAL_ERROR' } = {}) { super(message); this.status = status; this.code = code; }
-  }
-  return {
-    ApiError: MockApiError,
-    api: { register: vi.fn(), login: vi.fn(), me: vi.fn(), products: vi.fn(), reservations: vi.fn(), createReservation: vi.fn(), cancelReservation: vi.fn(), completeReservation: vi.fn(), adminProducts: vi.fn(), createProduct: vi.fn(), updateProduct: vi.fn(), adminReservations: vi.fn() }
-  };
+vi.mock('../services/api.js', async () => {
+  const { apiMockFactory } = await import('../test/apiMock.js');
+  return apiMockFactory();
 });
 
 const anonymousAuth = { session: null, loading: false, saveSession: vi.fn(), logout: vi.fn() };

@@ -34,7 +34,7 @@ Prerequisites: Node.js 20+, npm, and Docker Desktop.
    docker compose ps
    ```
 
-4. Install dependencies and optionally seed an admin plus twelve products. Choose a real local-only seed password; it is not stored in source control.
+4. Install dependencies and optionally seed an admin, two demo customers, and 30 products. Choose a real local-only seed password; it is not stored in source control. The demo customers use `SEED_CUSTOMER_PASSWORD` (default `verify-local-password-123`) and are reset to it on every seed run.
 
    ```sh
    npm install
@@ -48,18 +48,19 @@ Prerequisites: Node.js 20+, npm, and Docker Desktop.
    npm run dev:frontend
    ```
 
-Open `http://localhost:5173`. Customers can register themselves. The sign-in screen asks for a Customer or Admin sign-in type and the API rejects accounts whose role does not match the selection. The seeded admin signs in as `admin@example.com` (Admin sign-in type) with the `SEED_ADMIN_PASSWORD` used above; additional customer or admin accounts can be provisioned from the admin **Team** page, and customer accounts can be soft-deleted and reactivated there (administrators cannot be deleted). The catalog ships with 30 products across five categories (Electronics, Furniture, Clothing, Home & Living, Stationery) and is browsable by category chips with server-side filtering. Seeded products carry verified stock-photo URLs, rendered on catalog cards and wishlist rows; if an image ever fails to load, the UI shows a per-category gradient tile instead.
+Open `http://localhost:5173`. Customers can register themselves or sign in with the seeded fixtures `customer@example.com` / `priya@example.com` (Customer sign-in type, `SEED_CUSTOMER_PASSWORD`). The sign-in screen asks for a Customer or Admin sign-in type and the API rejects accounts whose role does not match the selection. The seeded admin signs in as `admin@example.com` (Admin sign-in type) with the `SEED_ADMIN_PASSWORD` used above; additional customer or admin accounts can be provisioned from the admin **Team** page, and customer accounts can be soft-deleted and reactivated there (administrators cannot be deleted). The catalog ships with 30 products across five categories (Electronics, Furniture, Clothing, Home & Living, Stationery) and is browsable by category chips with server-side filtering. Seeded products carry verified stock-photo URLs, rendered on catalog cards and wishlist rows; if an image ever fails to load, the UI shows a per-category gradient tile instead.
 
 The reservation hold window defaults to 10 minutes; set `HOLD_MINUTES=1` in `backend/.env` (or prefix a dev command with it) to shorten holds while demoing expiry.
 
-## Test and build
+## Test, lint, and build
 
 ```sh
 npm test
+npm run lint
 npm run build --workspace frontend
 ```
 
-The backend suite (26 tests) starts a disposable MongoDB replica set and covers authentication, role gates, stock adjustment constraints, atomic reservations, idempotency (including a concurrent duplicate-key race), duplicate-line merging, cancellation, expiry, customer isolation, completion, contention (single- and multi-customer), transition-vs-expiry-worker races, and transaction retry behaviour. The frontend suite (19 tests) covers the auth flow, session restore, catalog/cart/reservation flows, admin inventory editing, and loading/error states.
+The backend suite (55 tests) starts a disposable MongoDB replica set and covers authentication, role gates, stock adjustment constraints, atomic reservations, idempotency (including a concurrent duplicate-key race), duplicate-line merging, cancellation, expiry, customer isolation, completion, contention (single- and multi-customer), transition-vs-expiry-worker races, and transaction retry behaviour. The frontend suite (63 tests) covers the auth flow, session restore, catalog/cart/reservation flows, admin inventory editing, wishlist behaviour, and loading/error states. ESLint (flat config, recommended baseline) is enforced over both workspaces, and a GitHub Actions workflow (`.github/workflows/ci.yml`) runs lint, both test suites, and the production build on every push and pull request.
 
 ## Manual UI verification
 
@@ -110,7 +111,7 @@ High-contention product documents—especially a popular low-stock SKU—would b
 
 ### 7. What remains before production readiness?
 
-Add refresh-token rotation/secure cookies, email verification/password recovery, rate limiting, audit logs for inventory changes, CSRF strategy where cookies are used, structured metrics/tracing/alerts, migration tooling, backups and restore drills, filterable/sortable list APIs (all lists are already paginated), broader end-to-end/accessibility tests, CI/CD, secrets management, and a multi-node MongoDB deployment.
+Add refresh-token rotation/secure cookies, email verification/password recovery, rate limiting, audit logs for inventory changes, CSRF strategy where cookies are used, structured metrics/tracing/alerts, migration tooling, backups and restore drills, filterable/sortable list APIs (all lists are already paginated), broader end-to-end/accessibility tests, secrets management, and a multi-node MongoDB deployment.
 
 ### 8. How AI was used
 

@@ -8,9 +8,19 @@ import { User } from '../models/User.js';
 const adminEmail = (process.env.SEED_ADMIN_EMAIL ?? 'admin@example.com').trim().toLowerCase();
 const adminPassword = process.env.SEED_ADMIN_PASSWORD;
 
+// Two seeded customers so the catalog, wishlist, reservation, and team views are
+// demoable without registering accounts through the UI. The same password applies
+// to both; SEED_CUSTOMER_RESET re-applies it (used by npm run verify:ui).
+const seedCustomers = [
+  { name: 'Jamie', email: 'customer@example.com' },
+  { name: 'Priya', email: 'priya@example.com' }
+];
+const customerPassword = process.env.SEED_CUSTOMER_PASSWORD ?? 'verify-local-password-123';
+
 async function seed() {
   assertRuntimeEnvironment();
   if (!adminPassword || adminPassword.length < 10) throw new Error('SEED_ADMIN_PASSWORD must contain at least 10 characters');
+  if (customerPassword.length < 10) throw new Error('SEED_CUSTOMER_PASSWORD must contain at least 10 characters');
   await connectDatabase(env.MONGODB_URI);
   const passwordHash = await bcrypt.hash(adminPassword, 12);
   // SEED_ADMIN_RESET=true (used by npm run verify:ui) re-applies the password so the
@@ -19,6 +29,13 @@ async function seed() {
   if (process.env.SEED_ADMIN_RESET === 'true') update.$set = { passwordHash };
   else update.$setOnInsert.passwordHash = passwordHash;
   await User.updateOne({ email: adminEmail }, update, { upsert: true });
+  const customerPasswordHash = await bcrypt.hash(customerPassword, 12);
+  for (const customer of seedCustomers) {
+    const customerUpdate = { $setOnInsert: { name: customer.name, email: customer.email, role: 'customer' } };
+    if (process.env.SEED_CUSTOMER_RESET === 'true') customerUpdate.$set = { passwordHash: customerPasswordHash };
+    else customerUpdate.$setOnInsert.passwordHash = customerPasswordHash;
+    await User.updateOne({ email: customer.email }, customerUpdate, { upsert: true });
+  }
   // Thirty products across five categories, so the catalog is browsable by category
   // and paginated out of the box. $set backfills the category on existing documents.
   await Product.bulkWrite([
@@ -53,7 +70,7 @@ async function seed() {
     { updateOne: { filter: { sku: 'BOARD-CORK' }, update: { $setOnInsert: { sku: 'BOARD-CORK', name: 'Cork Pin Board', description: 'A self-healing cork surface for ideas.', priceCents: 5400, onHand: 9, reserved: 0, isActive: true }, $set: { category: 'stationery', imageUrl: 'https://images.unsplash.com/photo-1503602642458-232111445657?w=800&q=80&auto=format&fit=crop' } }, upsert: true } },
     { updateOne: { filter: { sku: 'PLANNER-DAILY' }, update: { $setOnInsert: { sku: 'PLANNER-DAILY', name: 'Daily Planner 2026', description: 'Undated daily pages with weekly reviews.', priceCents: 3600, onHand: 15, reserved: 0, isActive: true }, $set: { category: 'stationery', imageUrl: 'https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=800&q=80&auto=format&fit=crop' } }, upsert: true } }
   ]);
-  logger.info({ adminEmail }, 'Seed data is ready');
+  logger.info({ adminEmail, customers: seedCustomers.map((customer) => customer.email) }, 'Seed data is ready');
   await disconnectDatabase();
 }
 

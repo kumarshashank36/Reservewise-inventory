@@ -1,8 +1,12 @@
 {
   "name": "inventory-reservation-system",
   "private": true,
+  "type": "module",
   "version": "1.0.0",
-  "workspaces": ["backend", "frontend"],
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
     "dev": "npm run dev --workspace backend & npm run dev --workspace frontend",
     "dev:backend": "npm run dev --workspace backend",
@@ -10,11 +14,18 @@
     "test": "npm run test --workspace backend && npm run test --workspace frontend",
     "test:backend": "npm run test --workspace backend",
     "test:frontend": "npm run test --workspace frontend",
+    "lint": "eslint backend/src frontend/src",
+    "lint:backend": "eslint backend/src",
+    "lint:frontend": "eslint frontend/src",
     "verify:ui": "bash scripts/verify-ui.sh",
     "dev:backend:short-hold": "HOLD_MINUTES=1 npm run dev --workspace backend"
   },
-  "devDependencies": {
-    "jsdom": "^26.1.0"
+  "engines": {
+    "node": ">=20"
   },
-  "engines": { "node": ">=20" }
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.1",
+    "globals": "^17.11.0"
+  }
 }

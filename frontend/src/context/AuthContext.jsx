@@ -28,7 +28,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!session?.token) return;
     refreshSession(session.token).finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Revalidate whenever the tab regains focus so role changes, deactivations,

@@ -4,15 +4,12 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { EmptyState, ErrorState, LoadingState } from '../components/AsyncState.jsx';
 import { PageHeader } from '../components/AppShell.jsx';
 import { Pagination } from '../components/Pagination.jsx';
-import { ProductImage } from '../components/ProductImage.jsx';
 import { ReservationStatus } from '../components/ReservationStatus.jsx';
-import { CATEGORIES, categoryLabel } from '../categories.js';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
+import { patchSearchParams } from '../url.js';
 import { api } from '../services/api.js';
 
 const PAGE_SIZE = 10;
-const blankProduct = { sku: '', name: '', description: '', priceCents: '', onHand: '', category: 'electronics', imageUrl: '' };
-const blankUser = { name: '', email: '', password: '', role: 'admin' };
 
 export function AdminReservations() {
   const { session } = useAuth();
@@ -23,16 +20,7 @@ export function AdminReservations() {
   const search = searchParams.get('q') ?? null;
   const sort = searchParams.get('sort') ?? 'createdAt-desc';
   const [data, setData] = useState({ loading: true, error: null, reservations: [] }); const [pagination, setPagination] = useState(null);
-  const setParam = (patch) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      for (const [key, value] of Object.entries(patch)) {
-        if (value === null || value === undefined || value === '') next.delete(key);
-        else next.set(key, String(value));
-      }
-      return next;
-    });
-  };
+  const setParam = (patch) => patchSearchParams(setSearchParams, patch);
   const [searchInput, setSearchInput] = useState(search ?? '');
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 400);
   useEffect(() => { if (debouncedSearch === (search ?? '')) return; setParam({ q: debouncedSearch || null, page: null }); }, [debouncedSearch]);

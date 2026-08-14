@@ -7,11 +7,10 @@ import { PageHeader } from '../components/AppShell.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import { ProductImage } from '../components/ProductImage.jsx';
 import { categoryLabel } from '../categories.js';
+import { heldMinutes, money } from '../format.js';
 import { api } from '../services/api.js';
 
 const PAGE_SIZE = 10;
-const money = (cents) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
-const heldMinutes = (reservation) => Math.max(1, Math.round((new Date(reservation.expiresAt).getTime() - new Date(reservation.createdAt).getTime()) / 60000));
 
 export function CustomerWishlist() {
   const { session } = useAuth();

@@ -3,14 +3,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError, api } from '../services/api.js';
 import { AuthProvider, useAuth } from './AuthContext.jsx';
 
-vi.mock('../services/api.js', () => {
-  class MockApiError extends Error {
-    constructor(message, { status = 500, code = 'INTERNAL_ERROR' } = {}) { super(message); this.status = status; this.code = code; }
-  }
-  return {
-    ApiError: MockApiError,
-    api: { register: vi.fn(), login: vi.fn(), me: vi.fn(), products: vi.fn(), reservations: vi.fn(), createReservation: vi.fn(), cancelReservation: vi.fn(), completeReservation: vi.fn(), adminProducts: vi.fn(), createProduct: vi.fn(), updateProduct: vi.fn(), adminReservations: vi.fn() }
-  };
+vi.mock('../services/api.js', async () => {
+  const { apiMockFactory } = await import('../test/apiMock.js');
+  return apiMockFactory();
 });
 
 function Probe() {

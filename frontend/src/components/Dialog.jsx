@@ -8,10 +8,12 @@ export function Dialog({ open, title, wide = false, onClose, children }) {
     const onKeyDown = (event) => { if (event.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onKeyDown);
     const previousOverflow = document.body.style.overflow;
+    const previousFocus = document.activeElement;
     document.body.style.overflow = 'hidden';
     return () => {
       document.removeEventListener('keydown', onKeyDown);
       document.body.style.overflow = previousOverflow;
+      if (previousFocus instanceof HTMLElement) previousFocus.focus(); // restore focus for keyboard users
     };
   }, [open, onClose]);
 

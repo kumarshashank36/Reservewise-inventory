@@ -7,15 +7,14 @@ import { PageHeader } from '../components/AppShell.jsx';
 import { Dialog } from '../components/Dialog.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import { ProductImage } from '../components/ProductImage.jsx';
-import { ReservationStatus } from '../components/ReservationStatus.jsx';
 import { CATEGORIES, categoryLabel } from '../categories.js';
+import { money } from '../format.js';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
+import { patchSearchParams } from '../url.js';
 import { api } from '../services/api.js';
 
 const PAGE_SIZE = 10;
-const money = (cents) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(cents / 100);
 const blankProduct = { sku: '', name: '', description: '', priceCents: '', onHand: '', category: 'electronics', imageUrl: '' };
-const blankUser = { name: '', email: '', password: '', role: 'admin' };
 
 export function AdminInventory() {
   const { session } = useAuth();
@@ -29,16 +28,7 @@ export function AdminInventory() {
   // Stable default: rows keep their place across edits and activate/deactivate.
   const sort = searchParams.get('sort') ?? 'name';
   const { showSnackbar } = useSnackbar(); const [data, setData] = useState({ loading: true, error: null, products: [] }); const [pagination, setPagination] = useState(null); const [form, setForm] = useState(blankProduct); const [saving, setSaving] = useState(false); const [open, setOpen] = useState(false); const [editing, setEditing] = useState(null); const [formError, setFormError] = useState(null);
-  const setParam = (patch) => {
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      for (const [key, value] of Object.entries(patch)) {
-        if (value === null || value === undefined || value === '') next.delete(key);
-        else next.set(key, String(value));
-      }
-      return next;
-    });
-  };
+  const setParam = (patch) => patchSearchParams(setSearchParams, patch);
   const [searchInput, setSearchInput] = useState(search ?? '');
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 400);
   useEffect(() => { if (debouncedSearch === (search ?? '')) return; setParam({ q: debouncedSearch || null, page: null }); }, [debouncedSearch]);

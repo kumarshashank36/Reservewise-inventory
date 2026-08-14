@@ -9,9 +9,11 @@ npm install
 npm run verify:ui
 ```
 
-The script boots MongoDB (Docker), seeds an admin plus three products, starts the API and the web app, opens `http://localhost:5173`, and prints a compact checklist. Press **Ctrl+C** when finished (MongoDB keeps running).
+The script boots MongoDB (Docker), seeds an admin, two demo customers, and 30 products, starts the API and the web app, opens `http://localhost:5173`, and prints a compact checklist. Press **Ctrl+C** when finished (MongoDB keeps running).
 
 **Seeded admin sign-in:** `admin@example.com` with the password from `SEED_ADMIN_PASSWORD` (default `verify-local-password-123`; anything you set yourself overrides it). The verify script resets the seeded admin's password to this value on every run, so these credentials always work.
+
+**Seeded customer sign-in:** `customer@example.com` and `priya@example.com` with the password from `SEED_CUSTOMER_PASSWORD` (same default, reset on every verify run). Use them for reservation, wishlist, and cross-customer isolation scenarios without registering accounts through the UI.
 
 **Fast path for expiry:** the hold window is configurable through `HOLD_MINUTES` (default 10).
 
@@ -88,7 +90,7 @@ HOLD_MINUTES=1 npm run verify:ui
 
 ### 10. Customer isolation
 
-1. Register a second customer in an incognito window.
+1. Sign in as `priya@example.com` in an incognito window (or register a second customer).
 2. **Expected:** their **My reservations** list is empty even though another account holds reservations. (The API also returns 404 for another customer's reservation id — covered by automated tests.)
    *Rule: customers only access their own reservations.*
 
@@ -175,9 +177,9 @@ HOLD_MINUTES=1 npm run verify:ui
 
 ### 21. Pagination
 
-1. Open the customer **Catalog** — the seed ships 12 products, so a pager appears below the grid.
-2. **Expected:** a "12 products · Page 1 of 2" bar with numbered page buttons (**1 2**), an active-state highlight on the current page, a **Per page** dropdown (5 / 10 / 20 / 50), and **Previous / Next** controls; Next loads page 2 and Previous becomes enabled. Choosing a new page size resets to page 1 and refetches (e.g. 20 → one page, 5 → three pages).
-3. The same pager appears on admin **Inventory** (12 products), and on **My reservations**, **Wishlist**, admin **Reservations**, and **Team** once those lists exceed 10 items.
+1. Open the customer **Catalog** — the seed ships 30 products, so a pager appears below the grid.
+2. **Expected:** a "30 products · Page 1 of 3" bar with numbered page buttons (**1 2 3**), an active-state highlight on the current page, a **Per page** dropdown (5 / 10 / 20 / 50), and **Previous / Next** controls; Next loads page 2 and Previous becomes enabled. Choosing a new page size resets to page 1 and refetches (e.g. 20 → two pages, 5 → six pages).
+3. The same pager appears on admin **Inventory** (30 products), and on **My reservations**, **Wishlist**, admin **Reservations**, and **Team** once those lists exceed 10 items.
 4. **Expected:** even with a single page of data the bar stays visible ("Page 1 of 1" with disabled controls), and visiting a page beyond the last (e.g. after removing the last item on page 2) snaps back to the last valid page.
    *Rule: every list endpoint is server-paginated (page/limit with totals); the draft cart still counts selections across all pages.*
 
@@ -205,7 +207,7 @@ HOLD_MINUTES=1 npm run verify:ui
 
 ## What is NOT manually verifiable via the UI (by design)
 
-These are the properties the UI cannot easily demonstrate, so they are enforced by automated tests instead (`npm test` — 26 backend, 19 frontend):
+These are the properties the UI cannot easily demonstrate, so they are enforced by automated tests instead (`npm test` — 55 backend, 63 frontend; `npm run lint` and GitHub Actions CI run on every push):
 
 - Idempotent retry with the same key after a lost response (backend test: concurrent duplicate keys).
 - Atomic rollback of a multi-product reservation when one line fails (backend test).
@@ -219,5 +221,5 @@ These are the properties the UI cannot easily demonstrate, so they are enforced 
 | `MongoDB did not become healthy` | Start Docker Desktop, then `docker compose up -d && docker compose ps`. |
 | `API failed to start` | Check `/tmp/reservewise-api.log`; port 4000 may be in use (`lsof -i :4000`). |
 | `Web app failed to start` | Check `/tmp/reservewise-web.log`; port 5173 may be in use (`lsof -i :5173`). |
-| Seed complains about the password | `SEED_ADMIN_PASSWORD` must be at least 10 characters. |
+| Seed complains about the password | `SEED_ADMIN_PASSWORD` must be at least 10 characters; `SEED_CUSTOMER_PASSWORD` has the same minimum. |
 | Stale data while verifying | The reservations page polls every 15s while holds are pending; a manual refresh always works. |

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from '../services/api.js';
 import { useAuth } from './AuthContext.jsx';
 
@@ -48,7 +48,8 @@ export function WishlistProvider({ children }) {
     }
   }, [ids, session.token]);
 
-  return <WishlistContext.Provider value={{ ids, loading, toggle }}>{children}</WishlistContext.Provider>;
+  const value = useMemo(() => ({ ids, loading, toggle }), [ids, loading, toggle]);
+  return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>;
 }
 
 export function useWishlist() {

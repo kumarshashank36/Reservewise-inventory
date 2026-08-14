@@ -7,14 +7,9 @@ import { WishlistProvider } from '../context/WishlistContext.jsx';
 import { ApiError, api } from '../services/api.js';
 import { CustomerCatalog, CustomerReservations } from './CustomerPages.jsx';
 
-vi.mock('../services/api.js', () => {
-  class MockApiError extends Error {
-    constructor(message, { status = 500, code = 'INTERNAL_ERROR' } = {}) { super(message); this.status = status; this.code = code; }
-  }
-  return {
-    ApiError: MockApiError,
-    api: { register: vi.fn(), login: vi.fn(), me: vi.fn(), products: vi.fn(), reservations: vi.fn(), createReservation: vi.fn(), cancelReservation: vi.fn(), completeReservation: vi.fn(), adminProducts: vi.fn(), createProduct: vi.fn(), updateProduct: vi.fn(), adminReservations: vi.fn(), adminUsers: vi.fn(), createUser: vi.fn(), deactivateUser: vi.fn(), reactivateUser: vi.fn(), wishlist: vi.fn(), addWishlistItem: vi.fn(), removeWishlistItem: vi.fn() }
-  };
+vi.mock('../services/api.js', async () => {
+  const { apiMockFactory } = await import('../test/apiMock.js');
+  return apiMockFactory();
 });
 
 const customerAuth = {
@@ -223,12 +218,12 @@ describe('CustomerCatalog', () => {
 
     await screen.findByText('Desk Lamp');
     // The chip row offers all categories plus "All", and the card shows its category label.
-    expect(screen.getByRole('tab', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
     expect(within(screen.getByRole('article')).getByText('Electronics')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Furniture' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Furniture' }));
     await waitFor(() => expect(api.products).toHaveBeenLastCalledWith('customer-token', { page: 1, limit: 10, category: 'furniture', search: null, sort: 'name' }));
-    expect(screen.getByRole('tab', { name: 'Furniture' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Furniture' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows product images in the reservation draft', async () => {

@@ -1,6 +1,8 @@
 import { ZodError } from 'zod';
 import { AppError } from '../errors/AppError.js';
 
+// Express only recognizes error middleware by its 4-argument signature, so `next` must stay.
+// eslint-disable-next-line no-unused-vars
 export function errorHandler(error, req, res, next) {
   const requestId = req.id;
   const log = req.log ?? console;
@@ -14,6 +16,12 @@ export function errorHandler(error, req, res, next) {
   if (error instanceof AppError) {
     return res.status(error.statusCode).json({
       error: { code: error.code, message: error.message, details: error.details, requestId }
+    });
+  }
+
+  if (error?.name === 'ValidationError') {
+    return res.status(400).json({
+      error: { code: 'VALIDATION_ERROR', message: 'Request validation failed', requestId }
     });
   }
 

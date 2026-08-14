@@ -1,12 +1,13 @@
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, it, vi } from 'vitest';
 import { api } from '../services/api.js';
 import { AuthContext } from './AuthContext.jsx';
 import { useWishlist, WishlistProvider } from './WishlistContext.jsx';
 
-vi.mock('../services/api.js', () => ({
-  api: { wishlist: vi.fn(), addWishlistItem: vi.fn(), removeWishlistItem: vi.fn() }
-}));
+vi.mock('../services/api.js', async () => {
+  const { apiMockFactory } = await import('../test/apiMock.js');
+  return apiMockFactory();
+});
 
 const customerAuth = {
   session: { token: 'customer-token', user: { id: 'u1', name: 'Jamie', email: 'jamie@example.com', role: 'customer' } },

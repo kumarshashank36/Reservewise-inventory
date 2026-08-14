@@ -17,6 +17,7 @@ API_URL="${API_URL:-http://localhost:4000/api/v1}"
 WEB_URL="${WEB_URL:-http://localhost:5173}"
 HOLD_MINUTES="${HOLD_MINUTES:-10}"
 SEED_ADMIN_PASSWORD="${SEED_ADMIN_PASSWORD:-verify-local-password-123}"
+SEED_CUSTOMER_PASSWORD="${SEED_CUSTOMER_PASSWORD:-verify-local-password-123}"
 
 say()  { printf '\n\033[1;36m▸ %s\033[0m\n' "$*"; }
 warn() { printf '\033[1;33m⚠ %s\033[0m\n' "$*"; }
@@ -77,9 +78,11 @@ fi
 say "MongoDB replica set is ready"
 
 # --- 3. Seed data ----------------------------------------------------------------
-say "Seeding admin user and sample products"
-# SEED_ADMIN_RESET keeps the admin password in sync with this run's SEED_ADMIN_PASSWORD.
-SEED_ADMIN_PASSWORD="$SEED_ADMIN_PASSWORD" SEED_ADMIN_RESET=true npm run seed --workspace backend
+say "Seeding admin user, customer fixtures, and sample products"
+# The *_RESET flags keep the seeded passwords in sync with this run's SEED_*_PASSWORD values.
+SEED_ADMIN_PASSWORD="$SEED_ADMIN_PASSWORD" SEED_ADMIN_RESET=true \
+  SEED_CUSTOMER_PASSWORD="$SEED_CUSTOMER_PASSWORD" SEED_CUSTOMER_RESET=true \
+  npm run seed --workspace backend
 
 # --- 4. API ----------------------------------------------------------------------
 if curl -fsS "$API_URL/health" >/dev/null 2>&1; then
@@ -111,6 +114,8 @@ cat <<CHECKLIST
 Manual UI verification checklist
 ────────────────────────────────
 Admin sign-in: admin@example.com (select the Admin sign-in type) / password from SEED_ADMIN_PASSWORD (default: verify-local-password-123)
+Customer sign-in: customer@example.com and priya@example.com (select the Customer sign-in type) /
+password from SEED_CUSTOMER_PASSWORD (same default)
 
  1. LANDING      The hero page loads with sign-in and register links.
  2. REGISTER     Create a customer. A password under 10 chars shows a validation error.
@@ -126,7 +131,8 @@ Admin sign-in: admin@example.com (select the Admin sign-in type) / password from
  7. RELEASE      Release a reservation → status Cancelled; catalog availability returns.
  8. COMPLETE     Reserve again → Complete → status Completed; the admin inventory view shows on-hand reduced.
  9. EXPIRY       See the fast path below.
-10. ISOLATION    Register a second customer → their reservation list starts empty.
+10. ISOLATION    Sign in as priya@example.com (or register a second customer) → their reservation list
+                 starts empty while customer@example.com keeps theirs.
 11. CONCURRENCY  As admin, add a product with on-hand = 1. In a normal window and an incognito window,
                  two customers reserve the last unit simultaneously → one succeeds, one shows the
                  insufficient-inventory error. (Automated: 8-way contention + cross-customer tests.)
@@ -158,9 +164,9 @@ Fast path for the 10-minute expiry (scenario 9):
   return within ~30s (the expiry worker interval).
 
 Detailed steps and expected outcomes: MANUAL_VERIFICATION.md
-Automated equivalents: npm test  (backend 31 tests, frontend 21 tests)
+Automated equivalents: npm test  (backend 55 tests, frontend 63 tests), npm run lint, and GitHub Actions CI on push.
 
-Note: the seed step above resets the seeded admin's password to SEED_ADMIN_PASSWORD.
+Note: the seed step above resets the seeded admin's and customers' passwords to SEED_ADMIN_PASSWORD / SEED_CUSTOMER_PASSWORD.
 Press Ctrl+C when you are done (services this script started stop; MongoDB keeps running).
 CHECKLIST
 

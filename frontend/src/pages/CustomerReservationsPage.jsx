@@ -5,10 +5,10 @@ import { EmptyState, ErrorState, LoadingState } from '../components/AsyncState.j
 import { PageHeader } from '../components/AppShell.jsx';
 import { Pagination } from '../components/Pagination.jsx';
 import { ReservationStatus } from '../components/ReservationStatus.jsx';
+import { formatCountdown } from '../format.js';
 import { api } from '../services/api.js';
 
 const PAGE_SIZE = 10;
-const formatCountdown = (ms) => { const total = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`; };
 
 export function CustomerReservations() {
   const { session } = useAuth(); const { showSnackbar } = useSnackbar(); const [data, setData] = useState({ loading: true, error: null, reservations: [] }); const [pagination, setPagination] = useState(null); const [page, setPage] = useState(1); const [limit, setLimit] = useState(PAGE_SIZE); const [actionId, setActionId] = useState(null); const [now, setNow] = useState(() => Date.now());
