@@ -36,6 +36,7 @@ describe('AdminInventory', () => {
     renderWithAuth(<AdminInventory />);
     await screen.findByText('Desk Lamp');
     expect(screen.getByRole('img', { name: 'Desk Lamp' })).toBeInTheDocument();
+    expect(screen.getByText('$59.00')).toBeInTheDocument(); // price column
 
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
     const nameInput = screen.getByLabelText('Name');

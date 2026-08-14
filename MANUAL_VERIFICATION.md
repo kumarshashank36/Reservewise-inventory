@@ -128,7 +128,8 @@ HOLD_MINUTES=1 npm run verify:ui
 ### 16. Session, redirects, and roles
 
 1. While signed in, refresh the page → you stay signed in (token is revalidated against `/auth/me`).
-2. Sign out → you land on the landing page.
+2. Click the **sign-out icon** in the sidebar's account block.
+3. **Expected:** a centered "Sign out?" dialog appears over a dimmed backdrop; **Sign out** confirms and lands on the landing page, while **Cancel**, the **Escape** key, or clicking the backdrop keeps you signed in.
 3. While signed in as a customer, visit `http://localhost:5173/admin` → redirected to `/app`. As an admin, visit `/app` → redirected to `/admin`.
 
 ### 17. Responsive layout

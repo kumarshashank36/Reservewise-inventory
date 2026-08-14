@@ -185,7 +185,7 @@ No requirement is missing, and no implemented feature is fake — every claim in
 
 - [x] Application source code committed (`frontend/`, `backend/`)
 - [x] Database schema in code (`backend/src/models/`) + seed script (`backend/src/scripts/seed.js`)
-- [x] Automated tests — 55 backend + 56 frontend, all passing
+- [x] Automated tests — 55 backend + 59 frontend, all passing
 - [x] Manual UI verification — `npm run verify:ui` + `MANUAL_VERIFICATION.md` (17 scenarios)
 - [x] README with local run instructions, architecture overview, trade-offs, and all 8 assessment answers
 - [x] DESIGN.md with invariants, edge cases, and API contract
