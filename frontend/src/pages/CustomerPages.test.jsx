@@ -214,6 +214,17 @@ describe('CustomerCatalog', () => {
     expect(screen.getByRole('tab', { name: 'Furniture' })).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('shows product images in the reservation draft', async () => {
+    api.products.mockResolvedValue({ payload: { products: [product({ imageUrl: 'https://example.com/lamp.jpg', category: 'electronics' })], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
+    renderWithAuth(<CustomerCatalog />);
+
+    await screen.findByText('Desk Lamp');
+    // One image on the card; a thumbnail joins it in the cart after adding.
+    expect(screen.getAllByRole('img', { name: 'Desk Lamp' })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Add one Desk Lamp' }));
+    expect(screen.getAllByRole('img', { name: 'Desk Lamp' })).toHaveLength(2);
+  });
+
   it('renders product images with a graceful category fallback', async () => {
     api.products.mockResolvedValue({ payload: { products: [product({ imageUrl: 'https://example.com/desk-lamp.jpg', category: 'home' })], pagination: { page: 1, limit: 10, total: 1, totalPages: 1 } } });
     renderWithAuth(<CustomerCatalog />);
