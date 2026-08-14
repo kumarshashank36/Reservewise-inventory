@@ -207,7 +207,7 @@ HOLD_MINUTES=1 npm run verify:ui
 
 ## What is NOT manually verifiable via the UI (by design)
 
-These are the properties the UI cannot easily demonstrate, so they are enforced by automated tests instead (`npm test` — 55 backend, 63 frontend; `npm run lint` and GitHub Actions CI run on every push):
+These are the properties the UI cannot easily demonstrate, so they are enforced by automated tests instead (`npm test` — 55 backend, 63 frontend; `npm run lint` covers the rest):
 
 - Idempotent retry with the same key after a lost response (backend test: concurrent duplicate keys).
 - Atomic rollback of a multi-product reservation when one line fails (backend test).

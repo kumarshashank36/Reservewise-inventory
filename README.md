@@ -60,7 +60,7 @@ npm run lint
 npm run build --workspace frontend
 ```
 
-The backend suite (55 tests) starts a disposable MongoDB replica set and covers authentication, role gates, stock adjustment constraints, atomic reservations, idempotency (including a concurrent duplicate-key race), duplicate-line merging, cancellation, expiry, customer isolation, completion, contention (single- and multi-customer), transition-vs-expiry-worker races, and transaction retry behaviour. The frontend suite (63 tests) covers the auth flow, session restore, catalog/cart/reservation flows, admin inventory editing, wishlist behaviour, and loading/error states. ESLint (flat config, recommended baseline) is enforced over both workspaces, and a GitHub Actions workflow (`.github/workflows/ci.yml`) runs lint, both test suites, and the production build on every push and pull request.
+The backend suite (55 tests) starts a disposable MongoDB replica set and covers authentication, role gates, stock adjustment constraints, atomic reservations, idempotency (including a concurrent duplicate-key race), duplicate-line merging, cancellation, expiry, customer isolation, completion, contention (single- and multi-customer), transition-vs-expiry-worker races, and transaction retry behaviour. The frontend suite (63 tests) covers the auth flow, session restore, catalog/cart/reservation flows, admin inventory editing, wishlist behaviour, and loading/error states. ESLint (flat config, recommended baseline) is enforced over both workspaces.
 
 ## Manual UI verification
 
