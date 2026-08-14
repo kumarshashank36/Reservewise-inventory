@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { WishlistProvider } from './context/WishlistContext.jsx';
 import { AppShell } from './components/AppShell.jsx';
 import { LoadingState } from './components/AsyncState.jsx';
+import { ThemeToggle } from './components/ThemeToggle.jsx';
 
 // Route-level code splitting: each page is its own chunk, fetched only when
 // visited. Customers never download admin code, admins never download customer
@@ -26,6 +27,7 @@ function LandingPage() {
       <nav className="site-nav" aria-label="Main navigation">
         <Link className="brand" to="/">reserve<span>wise</span></Link>
         <div className="nav-actions">
+          <ThemeToggle />
           <Link className="text-link" to="/login">Sign in</Link>
           <Link className="button button-primary" to="/register">Create account</Link>
         </div>

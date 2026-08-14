@@ -194,6 +194,8 @@ HOLD_MINUTES=1 npm run verify:ui
 2. **Expected:** the list filters live after a short typing pause (~400ms debounce — no request per keystroke), matching name or SKU case-insensitively; the pager reflects the filtered total. Clearing the search restores the full list. The URL shows `?q=lamp&…` and the browser Back button steps through previous filters.
 3. Use the **Sort** dropdown: **Name A–Z**, **Price: low to high**, **Price: high to low**.
 4. **Expected:** the grid reorders accordingly, always resetting to page 1.
+4b. Click the **☾/☀** toggle in the top right of the page (landing nav, sign-in page, or any app page header).
+4c. **Expected:** the whole app switches between light and dark palettes instantly with no flash on reload — the choice is remembered across sessions and respects the OS preference when first visiting.
 5. On admin **Inventory**, the toolbar offers search (name/SKU), **category**, **Active/Inactive**, and sort (**Recently updated / Name / Price**).
 6. **Expected:** each control filters server-side and composes with the others and with pagination.
 7. On admin **Reservations**, filter by **status** (Pending/Completed/Cancelled/Expired), search by SKU or item name, and sort **Newest first / Oldest first**.

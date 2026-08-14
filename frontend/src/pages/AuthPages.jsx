@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { ThemeToggle } from '../components/ThemeToggle.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../services/api.js';
 
@@ -22,7 +23,7 @@ export function AuthPage({ mode }) {
       navigate(location.state?.from ?? (payload.user.role === 'admin' ? '/admin' : '/app'), { replace: true });
     } catch (requestError) { setError(requestError.message); } finally { setSubmitting(false); }
   };
-  return <main className="auth-page"><Link className="brand" to="/">reserve<span>wise</span></Link><section className="auth-panel">
+  return <main className="auth-page"><div className="auth-theme"><ThemeToggle /></div><Link className="brand" to="/">reserve<span>wise</span></Link><section className="auth-panel">
     <p className="eyebrow">{register ? 'Set up your workspace' : 'Secure workspace access'}</p>
     <h1>{register ? 'Reserve with certainty.' : 'Welcome back.'}</h1>
     <p>{register ? 'Create a customer account to start reserving available inventory.' : 'Sign in to continue where you left off.'}</p>

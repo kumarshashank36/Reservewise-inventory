@@ -6,6 +6,13 @@
     <meta name="theme-color" content="#101828" />
     <meta name="description" content="A precise, dependable inventory reservation workspace." />
     <title>Reservewise</title>
+    <script>
+      // Apply the saved theme before first paint so there is no flash.
+      try {
+        var theme = localStorage.getItem('reservewise.theme') || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+        document.documentElement.setAttribute('data-theme', theme);
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

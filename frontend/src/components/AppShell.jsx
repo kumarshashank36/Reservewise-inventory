@@ -1,5 +1,6 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { ThemeToggle } from './ThemeToggle.jsx';
 
 export function AppShell({ children }) {
   const { session, logout } = useAuth();
@@ -23,7 +24,7 @@ export function AppShell({ children }) {
       </nav>
       <div className="account-block"><div className="avatar">{session.user.name.slice(0, 1).toUpperCase()}</div><div><strong>{session.user.name}</strong><small>{session.user.role}</small></div><button className="icon-button" aria-label="Sign out" onClick={signOut}>↗</button></div>
     </aside>
-    <main className="app-main">{children}</main>
+    <main className="app-main"><div className="app-topbar"><ThemeToggle /></div>{children}</main>
   </div>;
 }
 
