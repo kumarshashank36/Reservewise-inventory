@@ -1,5 +1,6 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Link, Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
+import { trackPageView } from './analytics.js';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { SnackbarProvider } from './context/SnackbarContext.jsx';
 import { WishlistProvider } from './context/WishlistContext.jsx';
@@ -37,6 +38,16 @@ function AuthFallback() {
       Loading sign-in…
     </main>
   );
+}
+
+// Emits a GA page_view on every route change (including the first load) when
+// VITE_GA_MEASUREMENT_ID is configured; a no-op otherwise.
+function RouteTracker() {
+  const location = useLocation();
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
+  return null;
 }
 
 // Landing-only theme toggle: a faithful copy of the ThemeToggle from commit
@@ -161,6 +172,7 @@ export default function App() {
   return (
     <AuthProvider>
       <SnackbarProvider>
+        <RouteTracker />
         <Routes>
           <Route path="/" element={<LandingPage />} />
           <Route

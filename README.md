@@ -54,6 +54,8 @@ Open `http://localhost:5173`. Customers can register themselves or sign in with 
 
 The reservation hold window defaults to 10 minutes; set `HOLD_MINUTES=1` in `backend/.env` (or prefix a dev command with it) to shorten holds while demoing expiry.
 
+Google Analytics: every route sends a GA4 page view to measurement ID `G-CV5XG3MDNY` — including when reviewers clone the repo and run the app locally. The ID is baked in as the default and also present in `frontend/.env.example`, so fresh setups are tracked automatically; set `VITE_GA_MEASUREMENT_ID` in `frontend/.env` to point tracking at a different property instead.
+
 ## Test, lint, and build
 
 ```sh
