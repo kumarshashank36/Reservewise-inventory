@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { X } from 'lucide-react';
 import { Button } from '../components/ui/button.jsx';
 
@@ -21,8 +21,9 @@ export function SnackbarProvider({ children }) {
     },
     [dismiss],
   );
+  const value = useMemo(() => ({ showSnackbar }), [showSnackbar]);
   return (
-    <SnackbarContext.Provider value={{ showSnackbar }}>
+    <SnackbarContext.Provider value={value}>
       {children}
       <div className="fixed right-5 bottom-5 z-[60] grid w-[min(92vw,24rem)] gap-2" aria-live="polite">
         {toasts.map((toast) => (

@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../services/api.js';
 
 export const AuthContext = createContext(null);
@@ -51,12 +51,12 @@ export function AuthProvider({ children }) {
     };
   }, [refreshSession]);
 
-  const saveSession = ({ token, user }) => {
+  const saveSession = useCallback(({ token, user }) => {
     const next = { token, user };
     localStorage.setItem(SESSION_KEY, JSON.stringify(next));
     setSession(next);
-  };
-  const logout = () => {
+  }, []);
+  const logout = useCallback(() => {
     localStorage.removeItem(SESSION_KEY);
     // The reservation draft is user intent tied to this account; drop it on sign-out.
     if (session?.user?.id) {
@@ -67,9 +67,10 @@ export function AuthProvider({ children }) {
       }
     }
     setSession(null);
-  };
+  }, [session?.user?.id]);
 
-  return <AuthContext.Provider value={{ session, loading, saveSession, logout }}>{children}</AuthContext.Provider>;
+  const value = useMemo(() => ({ session, loading, saveSession, logout }), [session, loading, saveSession, logout]);
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
