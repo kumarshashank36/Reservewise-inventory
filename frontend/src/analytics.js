@@ -1,8 +1,8 @@
-// GA4 page-view tracking for the SPA, strictly opt-in: only active when the
-// deployer configures VITE_GA_MEASUREMENT_ID. Without it every call here is a
-// no-op and no script loads, so local runs and reviewers are never tracked
-// without explicit consent from whoever runs the app.
-const MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
+// GA4 page-view tracking for the SPA. The measurement ID defaults to the
+// assignment owner's property so that anyone who clones the repo and runs it
+// locally is tracked without any setup; VITE_GA_MEASUREMENT_ID overrides it
+// (the .env.example carries the same value).
+const MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID || 'G-CV5XG3MDNY';
 
 let loaded = false;
 let lastPath = null;
