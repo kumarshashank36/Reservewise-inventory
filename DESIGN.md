@@ -124,6 +124,12 @@ Indexes: `{ customerId: 1, idempotencyKey: 1 }` unique (only when key exists), `
 
 Indexes: `{ customerId: 1, productId: 1 }` unique — one entry per product per customer, and the index resolves concurrent double-add races. Wishlist entries are pure bookmarks: they never touch `onHand` or `reserved`. Availability shown to the customer is computed from the live product counters at read time.
 
+### Schema management and migrations
+
+Collections and indexes are declared declaratively by the Mongoose models and synced when the application starts (autoIndex). Data backfills — for example the reservation image-snapshot backfill — live in `backend/src/scripts` as idempotent, re-runnable one-off scripts (`npm run backfill:reservation-images --workspace backend`).
+
+For production, schema changes should move to a versioned migration runner (e.g. `migrate-mongo` or similar) applied by the deploy pipeline before the new application version serves traffic; the existing backfill-script convention is the seed of that system. The migration contract is: every change ships as an idempotent forward-only step, destructive changes ship as two-step releases (add → backfill → remove), and indexes are declared in code so fresh environments and migrations converge on the same schema.
+
 ## API structure
 
 All endpoints are prefixed with `/api/v1`. Errors use `{ error: { code, message, details? } }`.

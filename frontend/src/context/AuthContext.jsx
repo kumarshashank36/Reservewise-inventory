@@ -34,6 +34,10 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (!session?.token) return;
     refreshSession(session.token).finally(() => setLoading(false));
+    // Restore-once: revalidating on every session change would loop
+    // (refreshSession writes the session it reads), so the effect is
+    // deliberately mount-only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Revalidate whenever the tab regains focus so role changes, deactivations,

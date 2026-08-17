@@ -11,6 +11,7 @@ const envSchema = z.object({
   JWT_EXPIRES_IN: z.string().default('8h'),
   CLIENT_ORIGIN: z.string().url().default('http://localhost:5173'),
   HOLD_MINUTES: z.coerce.number().int().min(1).max(1440).default(10),
+  EXPIRY_BATCH_SIZE: z.coerce.number().int().min(1).max(10000).default(1000),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 

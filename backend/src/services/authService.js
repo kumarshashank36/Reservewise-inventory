@@ -61,8 +61,12 @@ export async function listUsers({ page, limit }) {
 export async function loginUser({ email, password, role }) {
   const user = await User.findOne({ email }).select('+passwordHash');
   // One generic failure for a missing account or a wrong password, so the response
-  // never reveals whether an email is registered or which role it has.
-  if (!user) throw new AppError(401, 'INVALID_CREDENTIALS', 'Email or password is incorrect');
+  // never reveals whether an email is registered, which role it has, or whether
+  // the account is deactivated. Password verification deliberately comes first:
+  // account state is only disclosed once the caller has proven the credentials.
+  if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+    throw new AppError(401, 'INVALID_CREDENTIALS', 'Email or password is incorrect');
+  }
   // A soft-deleted account is a distinct, actionable state for the account owner.
   if (user.deletedAt)
     throw new AppError(
@@ -70,9 +74,6 @@ export async function loginUser({ email, password, role }) {
       'ACCOUNT_DEACTIVATED',
       'This account has been deactivated. Contact an administrator for help.',
     );
-  if (!(await bcrypt.compare(password, user.passwordHash))) {
-    throw new AppError(401, 'INVALID_CREDENTIALS', 'Email or password is incorrect');
-  }
   // Credentials are valid, but the account must match the sign-in type the client selected.
   if (user.role !== role) {
     const expected = user.role === 'admin' ? 'an admin' : 'a customer';

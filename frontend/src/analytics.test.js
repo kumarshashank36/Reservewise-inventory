@@ -19,14 +19,12 @@ afterEach(() => {
 });
 
 describe('trackPageView', () => {
-  it('falls back to the default measurement ID when no env var is set', async () => {
+  it('is a complete no-op when no measurement ID is configured', async () => {
     const { trackPageView } = await loadAnalyticsModule();
     trackPageView('/app');
 
-    const calls = configCalls();
-    expect(calls).toHaveLength(1);
-    expect(calls[0][1]).toBe('G-CV5XG3MDNY');
-    expect(calls[0][2]).toMatchObject({ page_path: '/app' });
+    expect(window.gtag).toBeUndefined();
+    expect(document.querySelector('script[src*="googletagmanager"]')).toBeNull();
   });
 
   it('loads the gtag snippet and emits a config call with the page path', async () => {

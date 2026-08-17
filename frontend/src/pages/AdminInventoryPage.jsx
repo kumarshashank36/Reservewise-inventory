@@ -11,7 +11,7 @@ import { ProductImage } from '../components/ProductImage.jsx';
 import { CATEGORIES, categoryLabel } from '../categories.js';
 import { money } from '../format.js';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
-import { patchSearchParams } from '../url.js';
+import { usePatchSearchParams } from '../url.js';
 import { api } from '../services/api.js';
 
 const PAGE_SIZE = 10;
@@ -44,13 +44,16 @@ export function AdminInventory() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [formError, setFormError] = useState(null);
-  const setParam = (patch) => patchSearchParams(setSearchParams, patch);
+  const setParam = usePatchSearchParams(setSearchParams);
   const [searchInput, setSearchInput] = useState(search ?? '');
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 400);
   useEffect(() => {
     if (debouncedSearch === (search ?? '')) return;
     setParam({ q: debouncedSearch || null, page: null });
-  }, [debouncedSearch]);
+    // `search` is deliberately omitted: reacting to it would re-apply the
+    // debounced value and break back/forward navigation through filters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, setParam]);
   useEffect(() => {
     setSearchInput(search ?? '');
   }, [search]);
@@ -76,7 +79,7 @@ export function AdminInventory() {
       if (seq !== requestSeq.current) return;
       setData((current) => ({ ...current, loading: false, error }));
     }
-  }, [session.token, page, limit, filterCategory, filterActive, search, sort]);
+  }, [session.token, page, limit, filterCategory, filterActive, search, sort, setParam]);
   useEffect(() => {
     load();
   }, [load]);

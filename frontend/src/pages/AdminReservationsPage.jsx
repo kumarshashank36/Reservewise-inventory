@@ -7,7 +7,7 @@ import { Pagination } from '../components/Pagination.jsx';
 import { ProductImage } from '../components/ProductImage.jsx';
 import { ReservationStatus } from '../components/ReservationStatus.jsx';
 import { useDebouncedValue } from '../hooks/useDebouncedValue.js';
-import { patchSearchParams } from '../url.js';
+import { usePatchSearchParams } from '../url.js';
 import { api } from '../services/api.js';
 
 const PAGE_SIZE = 10;
@@ -22,13 +22,16 @@ export function AdminReservations() {
   const sort = searchParams.get('sort') ?? 'createdAt-desc';
   const [data, setData] = useState({ loading: true, error: null, reservations: [] });
   const [pagination, setPagination] = useState(null);
-  const setParam = (patch) => patchSearchParams(setSearchParams, patch);
+  const setParam = usePatchSearchParams(setSearchParams);
   const [searchInput, setSearchInput] = useState(search ?? '');
   const debouncedSearch = useDebouncedValue(searchInput.trim(), 400);
   useEffect(() => {
     if (debouncedSearch === (search ?? '')) return;
     setParam({ q: debouncedSearch || null, page: null });
-  }, [debouncedSearch]);
+    // `search` is deliberately omitted: reacting to it would re-apply the
+    // debounced value and break back/forward navigation through filters.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, setParam]);
   useEffect(() => {
     setSearchInput(search ?? '');
   }, [search]);
@@ -47,7 +50,7 @@ export function AdminReservations() {
       if (seq !== requestSeq.current) return;
       setData((current) => ({ ...current, loading: false, error }));
     }
-  }, [session.token, page, limit, status, search, sort]);
+  }, [session.token, page, limit, status, search, sort, setParam]);
   useEffect(() => {
     load();
   }, [load]);

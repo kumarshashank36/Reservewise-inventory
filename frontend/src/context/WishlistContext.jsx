@@ -42,7 +42,7 @@ export function WishlistProvider({ children }) {
       window.removeEventListener('focus', onVisible);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [session.token]);
+  }, [session.token, session.user.role]);
 
   const toggle = useCallback(
     async (productId) => {

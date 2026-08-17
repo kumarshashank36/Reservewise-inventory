@@ -1,6 +1,6 @@
 services:
   mongo:
-    image: mongo:8.0
+    image: mongo:8.0.29
     container_name: inventory-reservation-mongo
     command: ["mongod", "--replSet", "rs0", "--bind_ip_all"]
     environment:

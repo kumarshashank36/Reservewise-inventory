@@ -344,6 +344,14 @@ describe('auth and inventory API', () => {
     expect(login.status).toBe(401);
     expect(login.body.error.code).toBe('ACCOUNT_DEACTIVATED');
 
+    // A wrong password on a deactivated account must not reveal that the account
+    // exists: password verification runs before any account-state disclosure.
+    const probe = await request(app).post('/api/v1/auth/login').send({
+      email: 'doomed@example.com', password: 'definitely-not-the-password', role: 'customer'
+    });
+    expect(probe.status).toBe(401);
+    expect(probe.body.error.code).toBe('INVALID_CREDENTIALS');
+
     // The account stays in the team list with its deactivation timestamp.
     const list = await request(app).get('/api/v1/admin/users').set('Authorization', `Bearer ${admin}`);
     const listed = list.body.users.find((user) => user.id === customerId);

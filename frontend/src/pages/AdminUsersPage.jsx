@@ -6,7 +6,7 @@ import { EmptyState, ErrorState, LoadingState } from '../components/AsyncState.j
 import { PageHeader } from '../components/AppShell.jsx';
 import { Dialog } from '../components/Dialog.jsx';
 import { Pagination } from '../components/Pagination.jsx';
-import { patchSearchParams } from '../url.js';
+import { usePatchSearchParams } from '../url.js';
 import { api } from '../services/api.js';
 
 const PAGE_SIZE = 10;
@@ -18,7 +18,7 @@ export function AdminUsers() {
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Number(searchParams.get('page') ?? '1');
   const limit = Number(searchParams.get('limit') ?? String(PAGE_SIZE));
-  const setParam = (patch) => patchSearchParams(setSearchParams, patch);
+  const setParam = usePatchSearchParams(setSearchParams);
   const [data, setData] = useState({ loading: true, error: null, users: [] });
   const [pagination, setPagination] = useState(null);
   const [form, setForm] = useState(blankUser);
@@ -37,7 +37,7 @@ export function AdminUsers() {
     } catch (error) {
       setData((current) => ({ ...current, loading: false, error }));
     }
-  }, [session.token, page, limit]);
+  }, [session.token, page, limit, setParam]);
   useEffect(() => {
     load();
   }, [load]);

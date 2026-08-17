@@ -58,7 +58,7 @@ Open `http://localhost:5173`. Customers can register themselves or sign in with 
 
 The reservation hold window defaults to 10 minutes; set `HOLD_MINUTES=1` in `backend/.env` (or prefix a dev command with it) to shorten holds while demoing expiry.
 
-Google Analytics: every route sends a GA4 page view to measurement ID `G-CV5XG3MDNY` — including when reviewers clone the repo and run the app locally. The ID is baked in as the default and also present in `frontend/.env.example`, so fresh setups are tracked automatically; set `VITE_GA_MEASUREMENT_ID` in `frontend/.env` to point tracking at a different property instead.
+Google Analytics is strictly opt-in: set `VITE_GA_MEASUREMENT_ID` (a GA4 measurement ID like `G-XXXXXXXXXX`) in `frontend/.env` to track a page view on every route. No analytics script loads and nothing is tracked by default, so local runs and reviewers are never tracked without the deployer's explicit configuration.
 
 ## Test, lint, and build
 
@@ -88,6 +88,7 @@ The printed checklist walks through every feature in the browser, including a tw
 - Completing a reservation consumes its units: `onHand` and `reserved` are decremented together in the same transaction, so a completed sale reduces physical stock without ever breaking `onHand >= reserved`.
 - Reservations store immutable product snapshots (SKU, name, price, quantity, plus image/category display fields). Later product edits do not rewrite history.
 - MongoDB transactions require a replica set. This is why local Compose is not a plain standalone `mongod`.
+- Schema management is declarative: Mongoose models define collections and indexes, synced at startup, and data backfills are idempotent scripts under `backend/src/scripts` (see [DESIGN.md](./DESIGN.md)). Production would add a versioned migration runner applied before deploy.
 - There is no reservation TTL index: deleting expired documents would lose audit data and would not atomically return stock.
 - JWTs are used for the requested stateless authentication approach. The UI persists the current session for convenience; a production deployment should prefer short-lived access tokens with an HttpOnly refresh-token flow.
 
